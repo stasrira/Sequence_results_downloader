@@ -1,0 +1,11 @@
+# lxml
+# requests
+yagmail==0.14.247
+xlrd==1.2.0
+PyYAML==6.0 # 5.4
+# xlwt
+click~=8.0.1
+# pyodbc~=4.0.30
+python-dotenv~=0.17.1
+jinja2~=2.11.2
+# pydrive

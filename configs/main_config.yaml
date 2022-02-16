@@ -1,0 +1,53 @@
+Version: 1.00
+
+Logging:
+    #main log - log created by the main application
+    #inquiry log - log created for each processed inquiry
+
+    #defines log levels to be used for "main" and "file" logs. Usual values are INFO and DEBUG
+    main_log_level: DEBUG #INFO
+    inquiry_log_level: DEBUG #INFO
+
+Email:
+    #default settings for sending emails
+    default_from_email: stasrirak.ms@gmail.com
+    send_to_emails: ['stasrirak.ms@gmail.com']  # , 'stasrira@yahoo.com'
+    send_emails: True # expected values: True, False
+
+#Execute:
+#    # if set to true, data downloader file (Location/data_downloader_path) will be executed upon completion
+#    # of processing inquiries
+#    run_data_downloader: False
+
+Validate:
+    # if set to True, provided inquiry values will be validated against corresponded entries in the dict_config.yaml
+    inquiry_values_vs_dictionary: True # defines if parameters of the inquiry file are being validated vs dictionary
+#    aliquot_id_vs_manifest: True # defines if aliquot id will be validated vs manifest dataset of the DB
+    inquiry_min_number_columns: 4 # required minimum number of column in the inquiry file
+    inquiry_validate_number_columns: 4 # expected maximum number of columns to validate in the inquiry file
+
+#Database:
+#    connection:
+#        mdb_conn_str: Driver={ODBC Driver 17 for SQL Server};Server={!server!};Database={!db_name!};UID={!db_user_name!};PWD={!db_user_pwd!};
+#        db_plh_server: "{!server!}"
+#        db_plh_db_name: "{!db_name!}"
+#        db_plh_user_name: "{!db_user_name!}"
+#        db_plh_user_pwd: "{!db_user_pwd!}"
+#        env_db_server: DRC_DB_SERVER
+#        env_db_name: DRC_DB_NAME
+#        env_db_user_name: DRC_DB_USER_NAME
+#        env_db_user_pwd: DRC_DB_USER_PWD
+#
+#    procedure:
+#        # stored procedures to be used
+#        validate_aliquot_id: >
+#            exec [dbo].[usp_validate_aliquot_id]
+#            @aliquot_id = '{aliquot_id}',
+#            @center_id = {center_id},
+#            @dataset_type_id = 1
+#        validate_center_id: >
+#            exec dbo.usp_validate_center_id
+#            @center_value = '{@center_value}',
+#            @program_value = '{@program_value}',
+#            @center_value_type = '{@center_value_type}',
+#            @program_value_type = '{@program_value_type}'
