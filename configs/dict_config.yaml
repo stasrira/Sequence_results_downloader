@@ -1,14 +1,14 @@
 inquiry_file_structure:
     "1": download_source
     "2": url
-    "3": destination
-    "4": destination_directory_path
+    "3": destination_name
+    "4": destination_dir_path
     "5": unarchive_downloaded
 
 download_source:
     googledrive: GoogleDrive
 
-destination:
+destination_name:
     box: box
 
 archive_types:

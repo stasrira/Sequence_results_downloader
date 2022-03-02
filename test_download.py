@@ -6,9 +6,11 @@ from pathlib import  Path
 import re
 import os
 from zipfile import *  # ZipFile, BadZipfile
+import gdown
 
 
 def test_gdown(file_id, destination_dir = None, file_name = None):
+    # import gdown
     import gdown_local
     # url = 'https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU'
     # url = 'https://drive.google.com/file/d/1ZvekhXpv31zdF83CeCkY9Qqra47lItlt/view?usp=sharing'

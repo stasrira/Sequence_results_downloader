@@ -149,7 +149,9 @@ def download(
         except requests.exceptions.ProxyError as e:
             print("An error has occurred using proxy:", proxy, file=sys.stderr)
             print(e, file=sys.stderr)
-            return
+            # prepare sting to report error outside of function
+            _str = 'An error has occurred using proxy "{}": {}'.format(proxy, e)
+            return None, _str
 
         # Save cookies
         with open(cookies_file, "w") as f:
@@ -179,7 +181,9 @@ def download(
                 file=sys.stderr,
             )
             print("\n\t", url_origin, "\n", file=sys.stderr)
-            return
+            # prepare sting to report error outside of function
+            _str = 'Access denied with the following error: {}'.format(e)
+            return None, _str
 
     if gdrive_file_id and is_gdrive_download_link:
         content_disposition = six.moves.urllib_parse.unquote(
@@ -218,7 +222,9 @@ def download(
                     "Please remove them except one to resume downloading.",
                     file=sys.stderr,
                 )
-                return
+                _str = 'Too many temporary files to resume. Remove all but one to resume downloading => {}'\
+                    .format('|'.join(existing_tmp_files))
+                return None, _str
             tmp_file = existing_tmp_files[0]
         else:
             resume = False
@@ -272,8 +278,9 @@ def download(
             shutil.move(tmp_file, output)
     except IOError as e:
         print(e, file=sys.stderr)
-        return
+        _str = 'Unexpected error has occurred: {}'.format(e)
+        return None, _str
     finally:
         sess.close()
 
-    return output
+    return output, None

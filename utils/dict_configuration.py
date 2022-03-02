@@ -27,11 +27,11 @@ class DictConfigData (ConfigData):
         try:
             v = self.get_item_by_key(key_path)
             if v is not None:
-                return v
+                return v, True
             else:
-                return key
+                return key, False
         except Exception:
-            return key
+            return key, False
 
     # get value for the given key from dict_config.yaml file
     def get_dict_object(self, key, section):

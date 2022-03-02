@@ -120,3 +120,4 @@ venv.bak/
 /datasource_examples
 **/location_config.yaml
 **/source_location_config.yaml
+/download_temp

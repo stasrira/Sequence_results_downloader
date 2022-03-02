@@ -207,10 +207,10 @@ class Inquiry(File):
                     # if number of columns in the inquiry file > expected maximum, exit the loop
                     break
 
-                col_category = conf_dict.get_dict_value(str(i + 1), 'inquiry_file_structure')
+                col_category, match_found = conf_dict.get_dict_value(str(i + 1), 'inquiry_file_structure')
                 cur_val = str(row[i])
 
-                if col_category in ('download_source', 'destination'):
+                if col_category in ('download_source', 'destination_name'):
                     # validate values of specified fields against dictionary with list of expected values
                     if not conf_dict.key_exists_in_dict(cur_val.lower(), col_category):
                         _str = 'Unexpected value "{}" was provided for "{}" (line #{}, column #{})' \
@@ -274,9 +274,12 @@ class Inquiry(File):
             value = inq_line[col_num - 1].strip()
         else:
             value = ''
-        # validate the provided program code through the dictionary
+        # validate the provided value through the dictionary
         if validate_by_dictionary:
-            value = self.conf_dict.get_dict_value(str(value).lower(), field_name)
+            value_dict, match_found = self.conf_dict.get_dict_value(str(value).lower(), field_name)
+            if match_found:
+                value = value_dict
+
         return value
 
     # def process_inquiry_sources(self):
@@ -354,12 +357,75 @@ class Inquiry(File):
     #     pass
 
     def process_inquiry(self):
+        from file_load import file_utils as ft  # TODO: move to the top of the file
+
         # self.conf_process_entity = self.load_source_config()
         #
         # #  self.data_source_locations = self.conf_process_entity.get_value('Datasource/locations')
         # self.process_inquiry_sources()
         # self.match_inquiry_items_to_sources()
         # self.create_download_request_file()
+
+        cur_row = -1
+        for inq_line in self.lines_arr:
+            cur_row += 1
+            if cur_row == self.header_row_num - 1:
+                # skip the header row
+                continue
+
+            if cur_row + 1 in self.disqualified_items:
+                # skip rows that were disqualified
+                continue
+
+            # get download source assigned to the current row
+            dld_src = self.get_inquiry_value_by_field_name('download_source', inq_line)
+            # get download source url assigned to the current row
+            dld_src_url = self.get_inquiry_value_by_field_name('url', inq_line, False)
+            # get destination name assigned to the current row
+            dest_name = self.get_inquiry_value_by_field_name('destination_name', inq_line)
+            # get destination directory path assigned to the current row
+            dest_path = self.get_inquiry_value_by_field_name('destination_dir_path', inq_line, False)
+            # get unarchive_downloaded flag assigned to the current row
+            unarchive = self.get_inquiry_value_by_field_name('unarchive_downloaded', inq_line, False)
+
+            # get the source config file path
+            cfg_source_path = gc.CONFIG_FILE_SOURCE_PATH.replace('{source_id}', dld_src)
+            # get the source location config file path
+            cfg_source_location_path = gc.CONFIG_FILE_SOURCE_LOCATION_PATH.replace('{source_id}', dld_src)
+
+            # load configuration for the program specific path
+            cfg_source = ConfigData(Path(cfg_source_path))
+
+            if cfg_source.loaded:
+                # proceed here if the source config was loaded
+                # load source location config with location specific settings for the current source
+                cfg_source_location = ConfigData(Path(cfg_source_location_path))
+                if cfg_source_location.loaded:
+                    # if the source location config was loaded, update cfg_source config with the source location config
+                    cfg_source.update(cfg_source_location.get_whole_dictionary())
+
+                # get temp directory where to save the received file
+                dest_temp_dir = cfg_source.get_value('Location/temp_dir')
+                # proceed with the actual downloading of the file from gdrive
+                downloaded_file = cm.gdown_get_file(dld_src_url,dest_temp_dir, self.logger)
+
+                if downloaded_file:
+                    if ft.interpret_cfg_bool_value(unarchive):
+                        # proceed here with unarchiving of the downloaded file
+                        pass
+                    else:
+                        # proceed here with copying the file to the destination location
+                        pass
+
+            else:
+                _str = 'Datasource config file for the row #{} (source id: {}) cannot be loaded. ' \
+                       'The expected to exist file is not accessable: {}'\
+                    .format(cur_row, dld_src, cfg_source_path)
+                self.logger.warning(_str)
+                self.disqualify_inquiry_item(cur_row, _str, inq_line)
+            # cur_row += 1
+
+
         self.create_inquiry_file_for_disqualified_entries()
 
         # check for errors and put final log entry for the inquiry.

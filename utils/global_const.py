@@ -4,8 +4,8 @@ CONFIG_FILE_MAIN = 'configs/main_config.yaml'
 CONFIG_FILE_LOCATION = 'configs/location_config.yaml'
 CONFIG_FILE_DICTIONARY = 'configs/dict_config.yaml'
 CONFIG_FILE_DICTIONARY_PROGRAM = 'configs/programs/{program}/dict_program_config.yaml'
-CONFIG_FILE_SOURCE_PATH = 'configs/sources/{source_id}/{program}/{assay}_config.yaml'
-CONFIG_FILE_SOURCE_LOCATION_PATH = 'configs/sources/{source_id}/source_location_config.yaml'
+CONFIG_FILE_SOURCE_PATH = 'configs/download_sources/{source_id}/default/source_config.yaml'
+CONFIG_FILE_SOURCE_LOCATION_PATH = 'configs/download_sources/{source_id}/source_location_config.yaml'
 CONFIG_CUSTOM_SOFT_MATCH = None
 
 # default values of flags affecting replacing special characters in field's headers
