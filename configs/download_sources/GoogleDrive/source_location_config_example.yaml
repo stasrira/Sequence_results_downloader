@@ -1,13 +1,5 @@
 # location specific configuration to accommodate current source related settings
 
 Location:
-    # the following will handle utilization of a current user mount point settings for the current source
-    # path_to_replace string will be searched in the given path of the item's source
-    # and replaced with the value provided in the path_local_mountpoint
-
-    # part of the path to be searched for in the given source path
-    path_to_replace: D:\MounSinai\Darpa\Programming\DownloadRequestCreator_STASTEST # /sc/arion/projects/sealfs01a
-    # part of the path to be used to replace the path_to_replace value
-    path_local_mountpoint: D:\MounSinai\Darpa\Programming\DownloadRequestCreator # /home/stas/minerva/sealfon_arion
-    # global map-file path defined for the current source (this might be needed for cases when mapping is being posted manually)
-    map_file_path: "D:\MounSinai\Darpa\CHARM-study\CHARM_Submission_Related\Submission 3 - Feb 2022"
+    # temp location to save downloaded files
+    temp_dir: D:\MounSinai\Darpa\Programming\Sequence_results_downloader\download_temp

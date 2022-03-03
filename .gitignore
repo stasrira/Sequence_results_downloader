@@ -118,6 +118,8 @@ venv.bak/
 *reprocess/
 /inquiries
 /datasource_examples
+/download_destination
 **/location_config.yaml
 **/source_location_config.yaml
+**/destination_location_config.yaml
 /download_temp

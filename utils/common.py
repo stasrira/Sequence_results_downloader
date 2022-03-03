@@ -3,8 +3,8 @@ from jinja2 import Environment, FileSystemLoader
 import os, traceback
 from utils import global_const as gc
 import gdown_local
-# import zipfile
-from zipfile import *
+import shutil
+import patoolib
 
 
 def get_project_root():
@@ -127,6 +127,16 @@ def move_file_to_processed(file_path, new_file_name, processed_dir_path, log_obj
 
     return file_name_new_path
 
+def move_file(file_path, new_file_path):
+    if file_exists(file_path):
+        try:
+            shutil.move(file_path, new_file_path)
+            return None
+        except Exception as ex:
+            _str = 'Error occurred during moving the file "{}" to processed folder. \nError: {}\n{}'.format(
+                str(file_path), ex, traceback.format_exc())
+            return _str
+
 def verify_and_create_dir(dir, mode = None):
     if mode is None:
         mode = 0o666  # read and write for all users and groups
@@ -145,9 +155,6 @@ def gdown_get_file(url, destination_dir, log_obj, file_name = None):
     file_id = get_google_file_id(url)
     # check if the destination directory exists and create if needed
     verify_and_create_dir(destination_dir)
-    # if not os.path.exists(destination_dir):
-    #     mode = 0o666  # read and write for all users and groups
-    #     os.mkdir(destination_dir, mode)
 
     # define a file name for the downloaded file
     if file_name is None:
@@ -160,37 +167,19 @@ def gdown_get_file(url, destination_dir, log_obj, file_name = None):
     try:
         # execute the download process and get the name of the downloaded file
         gdown_file, gdown_error = gdown_local.download(id = file_id, output = output, quiet=False)
-        # print (final_file)
-        return gdown_file
+        return gdown_file, gdown_error
     except Exception as ex:
-        _str = 'Error occurred during downloadng from: "{}". \nError: {}\n{}'.format(
+        _str = 'Unexpected error occurred during downloadng from: "{}". \nError: {}\n{}'.format(
             url, ex, traceback.format_exc())
-        log_obj.error(_str)
-        return None
+        return None, _str
 
-def unzip(file_path, destination_dir = None):
-    err_str = ''
-    if not destination_dir is None:
-        # if destination dir is provided, create it if it does not exist
-        if not os.path.exists(destination_dir):
-            mode = 0o666  # read and write for all users and groups
-            os.mkdir(destination_dir, mode)
+def unarchive(file_path, destination_dir):
+    err_str = None
+    # check if the destination directory exists and create if needed
+    verify_and_create_dir(destination_dir)
 
-    if is_zipfile(file_path):
-        # if zip file is good to go
-        try:
-            # Create a ZipFile Object and load sample.zip in it
-            with ZipFile(file_path, 'r') as zipObj:
-                if destination_dir is None:
-                    # extract into the current directory
-                    zipObj.extractall()
-                else:
-                    # Extract all the contents of zip file in different directory
-                    zipObj.extractall(destination_dir)
-        except (BadZipfile, LargeZipFile, IOError) as e:
-            err_str = 'Exception caught in ZipFile: {}}'.format(e)
-    else:
-        err_str = 'Bad zip file: {}'.format(file_path)
-
-    print (err_str)
+    try:
+        patoolib.extract_archive(file_path, outdir = destination_dir)
+    except Exception as e:
+        err_str = 'Exception caught during un-archiving: {}'.format(e)
     return err_str

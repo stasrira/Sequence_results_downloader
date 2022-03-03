@@ -8,9 +8,8 @@ from utils import setup_logger_common
 from utils import ConfigData, DictConfigData
 from file_load import File  # , MetaFileExcel
 from app_error import InquiryError
-# from data_retrieval import DataSource, DBAccess
-# import xlwt
-import copy
+from file_load import file_utils as ft
+import xlwt
 
 
 class Inquiry(File):
@@ -213,21 +212,23 @@ class Inquiry(File):
                 if col_category in ('download_source', 'destination_name'):
                     # validate values of specified fields against dictionary with list of expected values
                     if not conf_dict.key_exists_in_dict(cur_val.lower(), col_category):
-                        _str = 'Unexpected value "{}" was provided for "{}" (line #{}, column #{})' \
+                        _str = 'Unexpected value "{}" was provided for "{}" (line #{}, column #{}). ' \
+                               'This entry was disqualified' \
                             .format(cur_val, col_category, row_count, i + 1)
-                        self.logger.critical(_str)
                         # disqualify an inquiry file row, if unexpected value was provided
                         self.disqualify_inquiry_item(row_count, _str, row)
+                        self.logger.error(_str)
                         failed_cnt += 1
                         break
                 else:
-                    # validate that give fields are not empty
+                    # validate that given fields are not empty
                     if len(cur_val.strip()) == 0:
-                        _str = 'Unexpected blank value was provided for "{}" (line #{}, column #{})' \
+                        _str = 'Unexpected blank value was provided for "{}" (line #{}, column #{}). ' \
+                               'This entry was disqualified.' \
                             .format(col_category, row_count, i + 1)
-                        self.logger.critical(_str)
                         # disqualify an inquiry file row, if unexpected value was provided
                         self.disqualify_inquiry_item(row_count, _str, row)
+                        self.logger.error(_str)
                         failed_cnt += 1
                         break
 
@@ -357,16 +358,8 @@ class Inquiry(File):
     #     pass
 
     def process_inquiry(self):
-        from file_load import file_utils as ft  # TODO: move to the top of the file
-
-        # self.conf_process_entity = self.load_source_config()
-        #
-        # #  self.data_source_locations = self.conf_process_entity.get_value('Datasource/locations')
-        # self.process_inquiry_sources()
-        # self.match_inquiry_items_to_sources()
-        # self.create_download_request_file()
-
-        cur_row = -1
+        self.logger.info('Start processing inquiry file\'s rows.')
+        cur_row = -1  # rows counter
         for inq_line in self.lines_arr:
             cur_row += 1
             if cur_row == self.header_row_num - 1:
@@ -375,8 +368,10 @@ class Inquiry(File):
 
             if cur_row + 1 in self.disqualified_items:
                 # skip rows that were disqualified
+                self.logger.info('Row #{} was skipped as disqualified'.format(cur_row + 1))
                 continue
 
+            self.logger.info('Row #{} will be attempted to be downloaded: {}'.format(cur_row + 1, inq_line))
             # get download source assigned to the current row
             dld_src = self.get_inquiry_value_by_field_name('download_source', inq_line)
             # get download source url assigned to the current row
@@ -392,9 +387,32 @@ class Inquiry(File):
             cfg_source_path = gc.CONFIG_FILE_SOURCE_PATH.replace('{source_id}', dld_src)
             # get the source location config file path
             cfg_source_location_path = gc.CONFIG_FILE_SOURCE_LOCATION_PATH.replace('{source_id}', dld_src)
-
-            # load configuration for the program specific path
+            # load configuration for the source
             cfg_source = ConfigData(Path(cfg_source_path))
+
+            # get the destination location config file path
+            cfg_destination_location_path = gc.CONFIG_FILE_DESTINATION_LOCATION_PATH\
+                .replace('{destination_id}', dest_name)
+            # load configuration for the destination
+            cfg_destination = ConfigData(Path(cfg_destination_location_path))
+
+            if not cfg_source.loaded:
+                _str = 'Datasource config file for the row #{} (source: {}) cannot be loaded ' \
+                       'and the row was disqualified. ' \
+                       'The expected to exist file is not accessible: {}' \
+                    .format(cur_row + 1, dld_src, cfg_source_path)
+                self.disqualify_inquiry_item(cur_row, _str, inq_line)
+                self.logger.warning(_str)
+                continue
+
+            if not cfg_destination.loaded:
+                _str = 'Destination config file for the row #{} (destination: {}) cannot be loaded ' \
+                       'and the row was disqualified. ' \
+                       'The expected to exist file is not accessible: {}' \
+                    .format(cur_row + 1, dest_name, cfg_destination_location_path)
+                self.disqualify_inquiry_item(cur_row, _str, inq_line)
+                self.logger.warning(_str)
+                continue
 
             if cfg_source.loaded:
                 # proceed here if the source config was loaded
@@ -406,24 +424,69 @@ class Inquiry(File):
 
                 # get temp directory where to save the received file
                 dest_temp_dir = cfg_source.get_value('Location/temp_dir')
-                # proceed with the actual downloading of the file from gdrive
-                downloaded_file = cm.gdown_get_file(dld_src_url,dest_temp_dir, self.logger)
+                self.logger.info('Starting downloading. URL: {} | Destination: {}'.format(dld_src_url, dest_temp_dir))
 
-                if downloaded_file:
-                    if ft.interpret_cfg_bool_value(unarchive):
-                        # proceed here with unarchiving of the downloaded file
-                        pass
+               # proceed with the actual downloading of the file from gdrive
+                downloaded_file, download_error = cm.gdown_get_file(dld_src_url,dest_temp_dir, self.logger)
+
+
+                if download_error is None:
+                    self.logger.info('Downloading attempt was finished without errors. Downloaded file name: {}'
+                                     .format(downloaded_file))
+                    if downloaded_file:
+                        if cfg_destination:  # make sure destination config is loaded
+                            # prepare the destination path for the downloaded file
+                            dest_replace_path = cfg_destination.get_value('Location/path_to_replace')
+                            dest_mountpoint_path = cfg_destination.get_value('Location/path_local_mountpoint')
+                            destination_path = str(Path(dest_path.replace(dest_replace_path, dest_mountpoint_path)))
+
+                            if ft.interpret_cfg_bool_value(unarchive):
+                                # proceed here with un-archiving of the downloaded file
+                                self.logger.info('Starting an un-archiving of the downloaded file. '
+                                                 'The outcome of the un-archiving will be saved to: {}'
+                                                 .format(destination_path))
+
+                                # verify the archive type
+                                if downloaded_file.endswith(('zip', 'rar', 'tar', 'bzip2', 'gzip')):
+                                    # proceed here with supported files
+                                    self.logger.info('The downloaded file was recognized as a supported archive.')
+                                    # zip_out = cm.unzip(downloaded_file, destination_path)
+                                    arc_out = cm.unarchive(downloaded_file, destination_path)
+                                    if not arc_out:
+                                        # no error reported during unzipping
+                                        self.logger.info('Un-archiving of the downloaded file was successful.')
+                                    else:
+                                        self.disqualify_inquiry_item(cur_row + 1, arc_out, inq_line)
+                                        self.logger.error('The following errors were reported during un-archiving '
+                                                          'and the row #{} was disqualified.'
+                                                          .format(cur_row+1, arc_out))
+                                else:
+                                    # provided format is not supported
+                                    self.logger.warning('Format of the downloaded archive file is not supported '
+                                                        'and the row will be disqualified.')
+                                pass
+                            else:
+                                # proceed here with copying the file to the destination location
+                                dld_file_name = Path(downloaded_file).name
+                                dest_file_path = str(Path(destination_path) / dld_file_name)
+                                move_out = cm.move_file(downloaded_file, dest_file_path)
+                                if move_out is None:
+                                    self.logger.info('The downloaded file: {} was moved to: {}'
+                                                     .format(downloaded_file, dest_file_path))
+                                else:
+                                    self.logger.error('An error were produced during moving the downloaded file: {} to: {}. Error: {}'
+                                                     .format(downloaded_file, dest_file_path, move_out))
                     else:
-                        # proceed here with copying the file to the destination location
-                        pass
+                        self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
+                        _str = 'Unexpectedly the path for the downloaded file was not received from the "gdown" ' \
+                               'module, while no other errors were reported.'
+                        self.logger.error(_str)
 
-            else:
-                _str = 'Datasource config file for the row #{} (source id: {}) cannot be loaded. ' \
-                       'The expected to exist file is not accessable: {}'\
-                    .format(cur_row, dld_src, cfg_source_path)
-                self.logger.warning(_str)
-                self.disqualify_inquiry_item(cur_row, _str, inq_line)
-            # cur_row += 1
+                else:
+                    self.logger.warning('Downloading attempt was finished with errors')
+                    self.logger.error(download_error)
+                    # self.error.add_error(download_error)
+                    self.disqualify_inquiry_item(cur_row+1, download_error, inq_line)
 
 
         self.create_inquiry_file_for_disqualified_entries()
@@ -484,7 +547,8 @@ class Inquiry(File):
                 disq_dir = Path(gc.DISQUALIFIED_INQUIRIES)
 
             # if DISQUALIFIED_INQUIRIES folder does not exist, it will be created
-            os.makedirs(disq_dir, exist_ok=True)
+            # os.makedirs(disq_dir, exist_ok=True)
+            cm.verify_and_create_dir(disq_dir)
 
             # identify path for the disqualified inquiry file
             self.disqualified_inquiry_path = Path(str(disq_dir) + '/' +

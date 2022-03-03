@@ -63,7 +63,6 @@ def process_sequence_download_inquiries():
     # path to the folder where all new inquiry files will be posted
     inquiries_loc = m_cfg.get_value('Location/inquiries')
 
-    # gc.DISQUALIFIED_INQUIRIES = m_cfg.get_value('Location/inquiries_disqualified')
     # get path configuration values and save them to global_const module
     # path to the folder where all application level log files will be stored (one file per run)
     gc.APP_LOG_DIR = m_cfg.get_value('Location/app_logs')
@@ -79,7 +78,7 @@ def process_sequence_download_inquiries():
     # # path to the folder where created submission packages will be located. One package sub_folder per inquiry.
     # gc.OUTPUT_REQUESTS_DIR = m_cfg.get_value('Location/output_requests')
     # # path to dir with dynamically created inquiry files for disqualified aliquots
-    # gc.DISQUALIFIED_INQUIRIES = m_cfg.get_value('Location/inquiries_disqualified_path')
+    gc.DISQUALIFIED_INQUIRIES = m_cfg.get_value('Location/inquiries_disqualified_path')
 
     log_folder_name = gc.APP_LOG_DIR  # gc.LOG_FOLDER_NAME
 
