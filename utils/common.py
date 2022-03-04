@@ -13,11 +13,12 @@ def get_project_root():
 
 
 def file_exists(fn):
-    try:
-        with open(fn, "r"):
-            return 1
-    except IOError:
-        return 0
+    return os.path.exists(fn)
+    # try:
+    #     with open(fn, "r"):
+    #         return 1
+    # except IOError:
+    #     return 0
 
 def is_excel(file_path):
     ext = Path(file_path).suffix
@@ -144,15 +145,17 @@ def verify_and_create_dir(dir, mode = None):
         # create dir if it does not exist
         os.mkdir(dir, mode)
 
-def get_google_file_id(url):
-    return url.split("/")[5]  # the assumption that file id will be 6th element of the array after split
+def get_google_file_id(url, file_id_index = None):
+    # splits url by "/" sign and retrieves the file_id as a particular element from the list
+    if file_id_index is None:
+        file_id_index = 5  # default value for the index of the file id
+    return url.split("/")[file_id_index]  # the assumption that file id will be 6th element of the array after split
 
-def gdown_get_file(url, destination_dir, log_obj, file_name = None):
-    # url = 'https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU'
+def gdown_get_file(url, destination_dir, file_id_index, log_obj, file_name = None):
     # url = 'https://drive.google.com/file/d/1ZvekhXpv31zdF83CeCkY9Qqra47lItlt/view?usp=sharing'
     # id = '1ZvekhXpv31zdF83CeCkY9Qqra47lItlt'
 
-    file_id = get_google_file_id(url)
+    file_id = get_google_file_id(url, file_id_index)
     # check if the destination directory exists and create if needed
     verify_and_create_dir(destination_dir)
 

@@ -1,2 +1,5 @@
 url:
   file_id_index: 5  # index of the file_id value after splitting the url by "/"
+
+temp_file:
+  delete_after_use: True  # if set to yes, will preserve files downloaded to temp directory, otherwise files will be deleted

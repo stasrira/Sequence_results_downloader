@@ -37,8 +37,10 @@ def setup_common_basic_file_parameters(file_ob):
 def interpret_cfg_bool_value (value):
     out = None
     if value:
-        if value.lower() in ['true', 'yes']:
+        if isinstance(value, bool):
+            out = value
+        elif str(value).lower() in ['true', 'yes']:
             out = True
-        elif value.lower() in ['false', 'no']:
+        elif str(value).lower() in ['false', 'no']:
             out = False
     return out

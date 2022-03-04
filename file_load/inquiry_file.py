@@ -10,6 +10,7 @@ from file_load import File  # , MetaFileExcel
 from app_error import InquiryError
 from file_load import file_utils as ft
 import xlwt
+import traceback
 
 
 class Inquiry(File):
@@ -32,7 +33,7 @@ class Inquiry(File):
         self.log_handler = None
         self.logger = self.setup_logger(self.wrkdir, self.filename)
         self.logger.info('Start working with Sequence Results Download Inquiry file {}'.format(filepath))
-        self.inq_match_arr = []  # TODO: check if needed
+        self.inq_processed_items = {}
         self.columns_arr = []
         # self.inq_sources = {}
         # self.inq_line_sources = {}
@@ -283,84 +284,17 @@ class Inquiry(File):
 
         return value
 
-    # def process_inquiry_sources(self):
-    #     cur_row = 0
-    #     for inq_line in self.lines_arr:
-    #         if cur_row == self.header_row_num - 1:
-    #             # skip the header row
-    #             cur_row += 1
-    #             continue
-    #
-    #         # get program code assigned to the current row
-    #         program_code = self.get_inquiry_value_by_field_name('program_code', inq_line)
-    #         # get assay assigned to the current row
-    #         assay = self.get_inquiry_value_by_field_name('assay', inq_line)
-    #         # get source id assigned to the current row
-    #         source_id = self.get_inquiry_value_by_field_name('source_id', inq_line)
-    #
-    #         # get source config file
-    #         # 2 values are saved in tuple: program name specific path and default one.
-    #         # if program name specific path does not exist, the default will be used
-    #         cfg_source_path = (
-    #             # configuration path for the current program by name
-    #             gc.CONFIG_FILE_SOURCE_PATH\
-    #                 .replace('{program}', program_code)\
-    #                 .replace('{assay}', assay)\
-    #                 .replace('{source_id}', source_id),
-    #             # configuration path for the default program (used if no program specific path is present)
-    #             gc.CONFIG_FILE_SOURCE_PATH \
-    #                 .replace('{program}', 'default') \
-    #                 .replace('{assay}', assay) \
-    #                 .replace('{source_id}', source_id)
-    #         )
-    #         # get the source location config file path
-    #         cfg_source_location_path = gc.CONFIG_FILE_SOURCE_LOCATION_PATH.replace('{source_id}', source_id)
-    #
-    #         # attempt to load configuration for the program specific path
-    #         cfg_source = ConfigData(Path(cfg_source_path[0]))
-    #         if not cfg_source.loaded:
-    #             # if config was not loaded from the program specific path, load the default one
-    #             cfg_source = ConfigData(Path(cfg_source_path[1]))
-    #
-    #         if cfg_source.loaded:
-    #             # proceed here if the source config was loaded
-    #             # load source location config with location specific settings for the current source
-    #             cfg_source_location = ConfigData(Path(cfg_source_location_path))
-    #             if cfg_source_location.loaded:
-    #                 # if the source location config was loaded, update cfg_source config with the source location config
-    #                 cfg_source.update(cfg_source_location.get_whole_dictionary())
-    #
-    #             # get unique id of the datasource and check if the same id was used already, reuse that in such case
-    #             inq_line_datasource_id = self.get_inquiry_line_datasource_id(inq_line)
-    #             self.logger.info('Current inquiry row #{} was identified with the following data source id: {}'
-    #                              .format (cur_row, inq_line_datasource_id))
-    #             # assign source id (inq_line_datasource_id) to the current inquiry line
-    #             self.inq_line_sources[cur_row] = inq_line_datasource_id
-    #             if inq_line_datasource_id in self.inq_sources:
-    #                 # reuse existing datasource
-    #                 self.logger.info('Identified data source id for the current inquiry row #{} was identified as '
-    #                                  'already retrieved for one the earlier rows and will be re-used for '
-    #                                  'the current row.'.format(cur_row))
-    #             else:
-    #                 # create a new datasource object
-    #                 inq_line_datasource = DataSource(self, cfg_source, inq_line, inq_line_datasource_id)
-    #                 self.inq_sources[inq_line_datasource_id] = inq_line_datasource
-    #         else:
-    #             sub_al = self.get_inquiry_value_by_field_name('sub-aliquot', inq_line, False)
-    #             _str = 'Datasource config file for the row #{} (sub_aliquot: {}) cannot be loaded. ' \
-    #                    'None of the expected to exist files is accessable: {}'\
-    #                 .format(cur_row, sub_al, ' | '.join(cfg_source_path))
-    #             self.logger.warning(_str)
-    #             self.disqualify_inquiry_item(sub_al, _str, cur_row)
-    #         cur_row += 1
-    #
-    #         # sources = self.conf_process_entity.get_value('sources')
-    #     pass
-
     def process_inquiry(self):
         self.logger.info('Start processing inquiry file\'s rows.')
         cur_row = -1  # rows counter
         for inq_line in self.lines_arr:
+            # set default values for local variables
+            destination_path = None
+            downloaded_file = None
+            downloaded_file_unarchived = None
+            downloaded_file_copied = None
+            temp_file_deleted = None
+
             cur_row += 1
             if cur_row == self.header_row_num - 1:
                 # skip the header row
@@ -371,6 +305,7 @@ class Inquiry(File):
                 self.logger.info('Row #{} was skipped as disqualified'.format(cur_row + 1))
                 continue
 
+            # get values of the current inquiry row
             self.logger.info('Row #{} will be attempted to be downloaded: {}'.format(cur_row + 1, inq_line))
             # get download source assigned to the current row
             dld_src = self.get_inquiry_value_by_field_name('download_source', inq_line)
@@ -396,6 +331,7 @@ class Inquiry(File):
             # load configuration for the destination
             cfg_destination = ConfigData(Path(cfg_destination_location_path))
 
+            # validate that source config was loaded
             if not cfg_source.loaded:
                 _str = 'Datasource config file for the row #{} (source: {}) cannot be loaded ' \
                        'and the row was disqualified. ' \
@@ -404,7 +340,7 @@ class Inquiry(File):
                 self.disqualify_inquiry_item(cur_row, _str, inq_line)
                 self.logger.warning(_str)
                 continue
-
+            # validate that destination config was loaded
             if not cfg_destination.loaded:
                 _str = 'Destination config file for the row #{} (destination: {}) cannot be loaded ' \
                        'and the row was disqualified. ' \
@@ -415,7 +351,6 @@ class Inquiry(File):
                 continue
 
             if cfg_source.loaded:
-                # proceed here if the source config was loaded
                 # load source location config with location specific settings for the current source
                 cfg_source_location = ConfigData(Path(cfg_source_location_path))
                 if cfg_source_location.loaded:
@@ -424,11 +359,24 @@ class Inquiry(File):
 
                 # get temp directory where to save the received file
                 dest_temp_dir = cfg_source.get_value('Location/temp_dir')
+                # get file_id index position (in the google drive share link) if applicable
+                file_id_index = cfg_source.get_value('url/file_id_index')
+                # get flag defining if the temp files can be deleted after use
+                delete_temp_file = ft.interpret_cfg_bool_value(cfg_source.get_value('temp_file/delete_after_use'))
+
                 self.logger.info('Starting downloading. URL: {} | Destination: {}'.format(dld_src_url, dest_temp_dir))
 
-               # proceed with the actual downloading of the file from gdrive
-                downloaded_file, download_error = cm.gdown_get_file(dld_src_url,dest_temp_dir, self.logger)
-
+                if dld_src and dld_src.lower() == 'googledrive':
+                    # proceed with the actual downloading of the file from google drive
+                    downloaded_file, download_error = cm.gdown_get_file(dld_src_url,dest_temp_dir,
+                                                                        file_id_index, self.logger)
+                else:
+                    _str = 'Unexpected Download Source "{}" was provided for the row #{}; ' \
+                           'the row was disqualified. ' \
+                        .format(dld_src, cur_row + 1)
+                    self.disqualify_inquiry_item(cur_row, _str, inq_line)
+                    self.logger.warning(_str)
+                    continue
 
                 if download_error is None:
                     self.logger.info('Downloading attempt was finished without errors. Downloaded file name: {}'
@@ -446,15 +394,16 @@ class Inquiry(File):
                                                  'The outcome of the un-archiving will be saved to: {}'
                                                  .format(destination_path))
 
+                                downloaded_file_unarchived = False
                                 # verify the archive type
                                 if downloaded_file.endswith(('zip', 'rar', 'tar', 'bzip2', 'gzip')):
                                     # proceed here with supported files
                                     self.logger.info('The downloaded file was recognized as a supported archive.')
-                                    # zip_out = cm.unzip(downloaded_file, destination_path)
                                     arc_out = cm.unarchive(downloaded_file, destination_path)
                                     if not arc_out:
                                         # no error reported during unzipping
                                         self.logger.info('Un-archiving of the downloaded file was successful.')
+                                        downloaded_file_unarchived = True
                                     else:
                                         self.disqualify_inquiry_item(cur_row + 1, arc_out, inq_line)
                                         self.logger.error('The following errors were reported during un-archiving '
@@ -462,24 +411,59 @@ class Inquiry(File):
                                                           .format(cur_row+1, arc_out))
                                 else:
                                     # provided format is not supported
-                                    self.logger.warning('Format of the downloaded archive file is not supported '
-                                                        'and the row will be disqualified.')
+                                    _str = 'Archive format of the downloaded file is not supported - cannot ' \
+                                           'perform un-archiving (as per config setting). The downloaded file ' \
+                                           'will be copied instead.'
+                                    self.logger.warning(_str)
+                                    # since un-archiving cannot be performed, move the downloaded file to destination
+                                    downloaded_file_copied = \
+                                        self.copy_donwloaded_file_to_destination(downloaded_file, destination_path,
+                                                                             cur_row, inq_line)
                                 pass
                             else:
                                 # proceed here with copying the file to the destination location
-                                dld_file_name = Path(downloaded_file).name
-                                dest_file_path = str(Path(destination_path) / dld_file_name)
-                                move_out = cm.move_file(downloaded_file, dest_file_path)
-                                if move_out is None:
-                                    self.logger.info('The downloaded file: {} was moved to: {}'
-                                                     .format(downloaded_file, dest_file_path))
-                                else:
-                                    self.logger.error('An error were produced during moving the downloaded file: {} to: {}. Error: {}'
-                                                     .format(downloaded_file, dest_file_path, move_out))
+                                downloaded_file_copied = \
+                                    self.copy_donwloaded_file_to_destination(downloaded_file, destination_path,
+                                                                         cur_row, inq_line)
+
+                        # based on the config settings, delete the temp file after it was used
+                        if delete_temp_file:
+                            if cm.file_exists(downloaded_file):
+                                try:
+                                    os.remove(downloaded_file)
+                                    self.logger.info('Downloaded file from the temp directory was deleted: {}'
+                                                     .format(downloaded_file))
+                                except Exception as ex:
+                                    # report unexpected error during deleting the temp file
+                                    _str = 'Unexpected Error occurred (row #{}) during an attempt to delete the temp file {}: {}\n{} ' \
+                                        .format(cur_row+1, downloaded_file, ex, traceback.format_exc())
+                                    self.logger.error(_str)
+
+                            # verify that the file was actually delete and set the flag appropriately
+                            if not cm.file_exists(downloaded_file):
+                                temp_file_deleted = True
+                            else:
+                                temp_file_deleted = False
+
+                        processed_row_details = {
+                            # 'row_num': cur_row + 1,
+                            'dld_src': dld_src,
+                            'dld_src_url': dld_src_url,
+                            'dest_name': dest_name,
+                            'dest_path': dest_path,
+                            'unarchive': unarchive,
+                            'downloaded_file': downloaded_file,
+                            'destination_path': destination_path,
+                            'downloaded_file_unarchived': downloaded_file_unarchived,
+                            'downloaded_file_copied': downloaded_file_copied,
+                            'temp_file_deleted': temp_file_deleted,
+                            # 'disqualified': True if (cur_row + 1) in self.disqualified_items else False
+                        }
+                        self.inq_processed_items[cur_row + 1] = processed_row_details
                     else:
-                        self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
                         _str = 'Unexpectedly the path for the downloaded file was not received from the "gdown" ' \
                                'module, while no other errors were reported.'
+                        self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
                         self.logger.error(_str)
 
                 else:
@@ -488,7 +472,7 @@ class Inquiry(File):
                     # self.error.add_error(download_error)
                     self.disqualify_inquiry_item(cur_row+1, download_error, inq_line)
 
-
+        # if some inquiry rows were disqualified, create a file to re-process them
         self.create_inquiry_file_for_disqualified_entries()
 
         # check for errors and put final log entry for the inquiry.
@@ -499,6 +483,23 @@ class Inquiry(File):
         else:
             _str = 'Processing of the current inquiry was finished successfully.\n'
             self.logger.info(_str)
+
+    def copy_donwloaded_file_to_destination(self, downloaded_file, destination_path, cur_row, inq_line):
+        dld_file_name = Path(downloaded_file).name
+        dest_file_path = str(Path(destination_path) / dld_file_name)
+        move_out = None
+        move_out = cm.move_file(downloaded_file, dest_file_path)
+        if move_out is None:
+            self.logger.info('The downloaded file: {} was moved to: {}'
+                             .format(downloaded_file, dest_file_path))
+            return True
+        else:
+            _str = 'An error was produced during moving the downloaded file and the row #{} ' \
+                   'was disqualified: {} to: {}. Error: {}' \
+                .format(cur_row + 1, downloaded_file, dest_file_path, move_out)
+            self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
+            self.logger.error(_str)
+            return False
 
     def disqualify_inquiry_item(self, id, disqualify_status, inquiry_item):
         # adds a sub aliquots to the dictionary of disqualified items

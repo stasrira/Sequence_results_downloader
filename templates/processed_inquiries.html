@@ -1,0 +1,23 @@
+{% set indent_left_0 = '&nbsp;&nbsp;' %}
+{% set indent_left_1 = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' %}
+
+<div>
+    Number of processed inquiries: <span style="font-weight: bold">{{inquiry.inq_cnt}}:</span>
+</div>
+{% if inquiry.run_data_download %}
+    <div>
+        The following <b>Data Downloader</b> app was started automatically (as per config):
+        {{indent_left_0}}<i>{{inquiry.downloader_path}}</i>
+        {% if inquiry.downloader_start_status == 'error' %}
+            <br/>
+            {{indent_left_1}}Run status: <span style="color: red; font-weight: bold;">{{inquiry.downloader_start_status}}</span>
+            (check the application log file for more details)
+        {% else %}
+            <br/>{{indent_left_1}}Run status: <span style="color: green;">{{inquiry.downloader_start_status}}</span>
+            (Another email should be sent upon completion of the Data Downloader)
+        {% endif %}
+    </div>
+{% else %}
+    <div>Data Downloader app was <b>not</b> started automatically (as per config).</div>
+{% endif %}
+{{inquiry.processed_details}}

@@ -1,21 +1,10 @@
-# lxml
-# requests
 yagmail==0.14.247
 xlrd==1.2.0
 PyYAML==6.0 # 5.4
 xlwt
 click~=8.0.1
-# pyodbc~=4.0.30
 python-dotenv~=0.17.1
 jinja2~=2.11.2
 gdown~=4.4.0
 
-# pydrive
-
-# libraries need to run gdown_local - TODO: verify if the following can be deleted 
-# filelock~=3.6.0
-# tqdm~=4.63.0
-# six~=1.16.0
-# requests~=2.25.1
-# beautifulsoup4~=4.10.0
 
