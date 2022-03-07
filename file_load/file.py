@@ -35,7 +35,6 @@ class File:
         self.error = FileError(self)
         self.lineList = []
         self.__headers = []
-        self.sample_id_field_names = []
         self.loaded = False
         self.header_row_num = 1  # default header row number
         self.replace_blanks_in_header = replace_blanks_in_header

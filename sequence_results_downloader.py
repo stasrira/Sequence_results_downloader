@@ -202,10 +202,8 @@ def process_sequence_download_inquiries():
                             (str(processed_dir / fl_processed_name) if processed_dir and fl_processed_name else None),
                         'inq_obj_errors_cnt': inq_obj.error.count,
                         'log_file_path': inq_obj.log_handler.baseFilename,
-                        'dld_request_file_path': str(inq_obj.download_request_path),
-                        'inq_sources': inq_obj.inq_sources,
-                        'inq_match_aliquots': inq_obj.inq_match_arr,
-                        'inq_disqul_aliquots': inq_obj.disqualified_items,
+                        'inq_processed_items': inq_obj.inq_processed_items,
+                        'disqualified_items': inq_obj.disqualified_items,
                         'inq_disqul_reprocess_path': str(inq_obj.disqualified_inquiry_path)
                     }
                     email_body_part = cm.populate_email_template('processed_inquiry.html', template_feeder)
@@ -226,7 +224,7 @@ def process_sequence_download_inquiries():
         mlog.info('Preparing to send notificatoin email.')
 
         email_to = m_cfg.get_value('Email/send_to_emails')
-        email_subject = 'processing of download inquiry. '
+        email_subject = 'processing of Sequence results download inquiry. '
 
         if inq_proc_cnt > 0:  # inquiries and len(inquiries) > 0:
             # collect final details and send email about this study results
@@ -247,9 +245,6 @@ def process_sequence_download_inquiries():
             # create a dictionary to feed into template for preparing an email body
             template_feeder = {
                 'inq_cnt': inq_proc_cnt,
-                # 'run_data_download': run_data_download,
-                'downloader_path': gc.DATA_DOWNLOADER_PATH,
-                'downloader_start_status': dd_status['status'].lower(),
                 'processed_details': '<br/>'.join(email_msgs)
             }
             email_body = cm.populate_email_template('processed_inquiries.html', template_feeder)

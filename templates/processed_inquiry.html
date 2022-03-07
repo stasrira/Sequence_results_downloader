@@ -1,9 +1,9 @@
 {% set indent_left_0 = '&nbsp;&nbsp;' %}
 {% set indent_left_1 = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' %}
-{% set td_width_1 = '80px' %}
+{% set td_width_1 = '90px' %}
 
-<br>
-<div style="font-weight: bold">Inquiry file #{{inquiry.file_num}}:</div>
+<br/>
+<div style="font-weight: bold; color: darkblue">Inquiry file #{{inquiry.file_num}}:</div>
 <!--report inquiry file move to processed folder-->
 {% if inquiry.file_path_new %}
     {{indent_left_1}}<i>{{inquiry.file_path}}</i>
@@ -34,90 +34,82 @@
     <br/>{{indent_left_1}}<i>{{inquiry.log_file_path}}</i>
 </div>
 
-<div>
-    Temporary folder for downloaded files:
-    <br/>{{indent_left_1}}<i>{{inquiry.temp_dir_path}}</i>
-</div>
-
-<br/>
-<div><b>DATA SOURCES</b>:</div>
-{% for inq_source in inquiry.inq_sources %}
-    {% set inq_source_obj = inquiry.inq_sources[inq_source] %}
-    <div>
-        Source name:
-        <b>{{inq_source_obj.source_name_generic}}</b>
-        <br/>
-        <b>Source id:</b>
-        <br/>
-        <i>{{inq_source}}</i>
-        <div> <!--style="padding-left: 40px;"-->
-            <table style="border-collapse: collapse;" cellspacing = 0 cellpadding = 0>
-            {% set source_types = inq_source_obj.source_types %}
-            {% for source_type in source_types %}
-                    <tr>
-                        <td ><b>{{source_type}}</b>: </td>
-                        <td width = '40px'>
-                            {{indent_left_0}}
-                            {% if source_type in inq_source_obj['disqualified_data_sources'] %}
-                                <span style="color: red">Disqualify</span>
-                            {% else %}
-                                <span style="color: green">OK</span>
-                            {% endif %}
-                        </td>
-                        <td >
-                            {{indent_left_0}}
-                            <i>{{source_types[source_type].source_path}}</i>
-                        </td>
-                    </tr>
-                    {% if source_type in inq_source_obj['disqualified_data_sources'] %}
-                        <!--list details of the disqualification reasons-->
-                        <tr>
-                            <td></td>
-                            <td style = "vertical-align:top;">
-                                {{indent_left_0}}
-                                <span style="color: red">Details:</span>
-                            </td>
-                            <td>
-                                {% for disqul_detail in inq_source_obj['disqualified_data_sources'][source_type] %}
-                                    <div style="color: red">
-                                        {{indent_left_0}}
-                                        <span>&#8226;</span> <!-- source: https://www.toptal.com/designers/htmlarrows/punctuation/bullet/ -->
-                                        {{disqul_detail}}</div>
-                                {% endfor %}
-                            </td>
-                        </tr>
-                    {% endif %}
-            {% endfor %}
-            </table>
-        </div>
-        <br/>
-    </div>
-{% endfor %}
-
-<div><b>ALIQUOTS</b>:</div>
-{% if inquiry.inq_match_aliquots %}
+<!--<div><b>Processed</b>:</div>-->
+{% if inquiry.inq_processed_items %}
     <div style="color: green; font-weight: bold;">
-        Processed Aliquots:
+        Processed Entries:
     </div>
     <div>
         <table style="border-collapse: collapse;" cellspacing = 0 cellpadding = 0>
-            {% for item in inquiry.inq_match_aliquots %}
-                {% if not item['sub-aliquot'] in inquiry.inq_disqul_aliquots %}
+            {% for item in inquiry.inq_processed_items %}
+                {% if not item in inquiry.disqualified_items %}
                     <tr>
-                        <td width = {{td_width_1}}px>
-                            <span style="font-weight: bold;">{{item['source_name_generic']}} ({{item['source_type_id']}})</span>
+                        <td width = {{td_width_1}} style="padding-top:10px">
+                            <span style="font-weight: bold;">Row #{{item}}</span>
                         </td>
                         <td>
-                            {{indent_left_0}}({{item['study']}})
+                        </td>
+                    </tr>
+                    <tr>
+                        <td width = {{td_width_1}} style="vertical-align: top">
+                            <span style="font-weight: normal; vertical-align: top"><b>Source: </b>
+                            </span>
+                        </td>
+                        <td >
+                            {{indent_left_0}}<span style="font-weight: bold; ">{{inquiry.inq_processed_items[item]['dld_src']}}</span>
+                            <br/>
+                            {{indent_left_0}}<span style="font-weight: normal;"><b>URL</b>: {{inquiry.inq_processed_items[item]['dld_src_url']}}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td width = {{td_width_1}} style="vertical-align: top">
+                            <span style="font-weight: normal; vertical-align: top">
+                                <b>Destination: </b>
+                            </span>
                         </td>
                         <td>
-                            {{indent_left_0}}{{item['sub-aliquot']}}
-                            {% if item['match_details']['match_type'] != 'exact' %}
-                                <span style="color: blueviolet; font-weight: bold;"> -{{item['match_details']['match_type']}} match-> </span>
+                            {{indent_left_0}}<span style="font-weight: bold;" >{{inquiry.inq_processed_items[item]['dest_name']}}</span>
+<!--                            <span style="font-weight: normal;">Requested: {{inquiry.inq_processed_items[item]['dest_path']}}</span>-->
+                            <br/>
+                            {{indent_left_0}}<span style="font-weight: normal;">Path: {{inquiry.inq_processed_items[item]['destination_path']}}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td width = {{td_width_1}} style="vertical-align: top;">
+                            <span style="font-weight: bold; ">Final stage:</span>
+                        </td>
+                        <td>
+                            {% if inquiry.inq_processed_items[item]['downloaded_file_unarchived'] %}
+                                {{indent_left_0}}<b>Un-archived</b>:
+                                <span style="font-weight: bold; color: green ">Yes</span>
                             {% else %}
-                                <span style="color: green;"> -{{item['match_details']['match_type']}} match-> </span>
+                                {{indent_left_0}}Un-archived:
+                                <span style="font-weight: normal; color: black ">No</span>
                             {% endif %}
-                            {{item['source_item_name']}} (<span style="font-size: small; font-style: italic">{{item['real_path']}}</span>)
+                            <br/>
+                            {% if inquiry.inq_processed_items[item]['downloaded_file_copied'] %}
+                                {{indent_left_0}}<b>Copied:</b>:
+                                <span style="font-weight: bold; color: green ">Yes</span>
+                            {% else %}
+                                {{indent_left_0}}Copied:
+                                <span style="font-weight: normal; color: black ">No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td width = {{td_width_1}} style="vertical-align: top;">
+                            <span style="font-weight: bold;">Temp file </span>
+                        </td>
+                        <td>
+                            {{indent_left_0}}Path: {{inquiry.inq_processed_items[item]['downloaded_file']}}
+                            <br/>
+                            {% if inquiry.inq_processed_items[item]['temp_file_deleted'] %}
+                                {{indent_left_0}}<b>Deleted on completion:</b>:
+                                <span style="font-weight: bold; color: green ">Yes</span>
+                            {% else %}
+                                {{indent_left_0}}Deleted on completion:
+                                <span style="font-weight: normal; color: black ">No</span>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endif %}
@@ -126,27 +118,27 @@
     </div>
 {% else %}
     <div style="color: black; font-weight: bold;">
-        Processed Aliquots:
+        Processed Entries:
     </div>
     <div>
         <span style="color: red; font-weight: bold;">None</span>
     </div>
 {% endif %}
 
-<!--disqualified aliquots-->
+<!--disqualified entries-->
 <br/>
-{% if inquiry.inq_disqul_aliquots %}
+{% if inquiry.disqualified_items %}
     <div style="padding-top: 4px;">
-        <span style="font-weight: bold;">Disqualified Aliquots</span>
-        (count: {{inquiry.inq_disqul_aliquots|length}}; see the log file for more details):
+        <span style="font-weight: bold;">Disqualified Entries</span>
+        (count: {{inquiry.disqualified_items|length}}; see the log file for more details):
     </div>
     <div>
-            {% for val in inquiry.inq_disqul_aliquots %}
-            <div style="color: black">{{disqul_detail}}
-                {{val}}
+            {% for val in inquiry.disqualified_items %}
+            <div style="color: black"><b>Row #{{val}}</b>
                 <br/>
-                <span style="color: red">status: {{inquiry.inq_disqul_aliquots[val]['status']}}</span>
-                Here is the inquiry entry for it: {{inquiry.inq_disqul_aliquots[val]['inquiry_item']}}
+                <span style="color: red">status: {{inquiry.disqualified_items[val]['status']}}</span>
+                <br/>
+                Inquiry entry for it: {{inquiry.disqualified_items[val]['inquiry_item']}}
             </div>
             {% endfor %}
     </div>
@@ -159,12 +151,17 @@
     </div>
 {% endif %}
 
-<br/>
+<!--<br/>-->
 <!--path for file for reprocessing disqualified aliquots-->
-<div style="padding-top: 4px;">A inquiry file for re-processing Disqualified Aliquots was saved in:</div>
-{% if inquiry.inq_disqul_aliquots %}
+<table>
+<tr>
+<td style="padding-top: 10px;">A inquiry file for re-processing Disqualified Aliquots was saved in:</td>
+<td>
+{% if inquiry.disqualified_items %}
     <span><i>{{inquiry.inq_disqul_reprocess_path}}</i></span>
 {% else %}
     <span>N/A</span>
 {% endif %}
-
+</td>
+</tr>
+</table>

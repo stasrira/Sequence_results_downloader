@@ -13,11 +13,11 @@ def send_yagmail(emails_to, subject, message, email_from=None, attachment_path=N
     if not email_from:
         email_from = m_cfg.get_value('Email/default_from_email')
     if not smtp_server:
-        smtp_server = os.environ.get('DRC_SMTP_SERVER')  # m_cfg.get_value('Email/smtp_server')
+        smtp_server = os.environ.get('SRD_SMTP_SERVER')  # m_cfg.get_value('Email/smtp_server')
     if not smtp_server_port:
         # smtp_server_port = m_cfg.get_value('Email/smtp_server_port')
-        if os.environ.get('DRC_SMTP_SERVER_PORT').isnumeric():
-            smtp_server_port = os.environ.get('DRC_SMTP_SERVER_PORT')
+        if os.environ.get('SRD_SMTP_SERVER_PORT').isnumeric():
+            smtp_server_port = os.environ.get('SRD_SMTP_SERVER_PORT')
         else:
             smtp_server_port = 25
 
