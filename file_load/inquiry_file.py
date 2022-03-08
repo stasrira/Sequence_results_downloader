@@ -273,7 +273,7 @@ class Inquiry(File):
 
         if field_name in self.file_structure_by_col_name:
             col_num = self.file_structure_by_col_name[field_name]
-            value = inq_line[col_num - 1].strip()
+            value = str(inq_line[col_num - 1]).strip()
         else:
             value = ''
         # validate the provided value through the dictionary

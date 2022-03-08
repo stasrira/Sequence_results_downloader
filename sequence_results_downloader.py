@@ -160,7 +160,7 @@ def process_sequence_download_inquiries():
                             _str = 'Processing status: "{}". Download Inquiry: {}'.format(fl_status, inq_path)
                             # errors_present = 'OK'  # this variable is set to OK by default, no update needed
                         else:
-                            # some disqualified sub-aliquots are presetn
+                            # some disqualified sub-aliquots are present
                             fl_status = 'OK_with_Disqualifications'
                             _str = 'Processing status: "{}". Download Inquiry: {}'.format(fl_status, inq_path)
                             if not errors_present == 'ERROR':
