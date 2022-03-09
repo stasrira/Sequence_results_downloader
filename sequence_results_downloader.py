@@ -75,17 +75,11 @@ def process_sequence_download_inquiries():
     processed_add_datestamp = m_cfg.get_value('Location/processed_add_datestamp')
     if processed_add_datestamp:
         gc.PROCESSED_ADD_DATESTAMP = processed_add_datestamp
-    # # path to the folder where created submission packages will be located. One package sub_folder per inquiry.
-    # gc.OUTPUT_REQUESTS_DIR = m_cfg.get_value('Location/output_requests')
-    # # path to dir with dynamically created inquiry files for disqualified aliquots
+
+    # path to dir with dynamically created inquiry files for disqualified aliquots
     gc.DISQUALIFIED_INQUIRIES = m_cfg.get_value('Location/inquiries_disqualified_path')
 
     log_folder_name = gc.APP_LOG_DIR  # gc.LOG_FOLDER_NAME
-
-    # # this variable define if Data Downloader app will be executed at the end of processing inquiries
-    # run_data_download = m_cfg.get_value('Execute/run_data_downloader')
-    # # path to the Data Downloader tool
-    # gc.DATA_DOWNLOADER_PATH = m_cfg.get_value('Location/data_downloader_path')
 
     prj_wrkdir = os.path.dirname(os.path.abspath(__file__))
 

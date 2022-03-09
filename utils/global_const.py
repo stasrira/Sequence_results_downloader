@@ -26,9 +26,6 @@ INQUIRY_LOG_DIR = ''  # path to the folder where all log files for processing in
                           # (one file per inquiry)
 INQUIRY_PROCESSED_DIR = ''  # path to the folder where all processed (and renamed) inquiries will be stored
 DISQUALIFIED_INQUIRIES = '' # path to dir with dynamically created inquiry files for disqualified aliquots
-OUTPUT_REQUESTS_DIR = ''  # path to the folder where all processed (and renamed) inquiries will be stored
-
-DATA_DOWNLOADER_PATH = '' # path to the location of Data Downloader app, set based on the main config value
 
 # name of the sheet name in the inquiry file (excel file) where from data should be retrieved.
 # If omitted, the first sheet in array of sheets will be used

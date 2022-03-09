@@ -14,11 +14,6 @@ Email:
     send_to_emails: ['stasrirak.ms@gmail.com']  # , 'stasrira@yahoo.com'
     send_emails: True # expected values: True, False
 
-#Execute:
-#    # if set to true, data downloader file (Location/data_downloader_path) will be executed upon completion
-#    # of processing inquiries
-#    run_data_downloader: False
-
 Validate:
     # if set to True, provided inquiry values will be validated against corresponded entries in the dict_config.yaml
     inquiry_values_vs_dictionary: True # defines if parameters of the inquiry file are being validated vs dictionary

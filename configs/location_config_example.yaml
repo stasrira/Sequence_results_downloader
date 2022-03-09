@@ -1,13 +1,6 @@
-  Destination:
-      path_template: "{bulk_data_path}/{study_path}/{target_subfolder}"
-      study_path_template: "{program_code}/{bulk_location}/{assay}"
-      bulk_data_path: /ext_data/shared
-
   Location:
     # location of a directory with inquiries
     inquiries: D:\MounSinai\Darpa\Programming\DownloadRequestCreator\inquiries
-    # path to the folder where newly created download request files are located
-    output_requests: D:\MounSinai\Darpa\Programming\DownloadRequestCreator\outcome_requests
     # path to the folder where application level log files are located (one per application run)
     app_logs: D:\MounSinai\Darpa\Programming\DownloadRequestCreator\logs
     # path to the folder where dynamically created inquiry files for disqualified aliquots will be saved
@@ -18,5 +11,3 @@
     inquiries_processed_relative_path: processed
     # defines if datetime prefix will be added to the name of the processed files
     processed_add_datestamp: True  # expected values: True, False
-    # path to Data Downloader tool. It will be executed by the app, if "Execute/run_data_downloader" is set to True
-    data_downloader_path: notepad.exe
