@@ -10,6 +10,3 @@ download_source:
 
 destination_name:
     box: box
-
-archive_types:
-    zip: zip
