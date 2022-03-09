@@ -123,3 +123,4 @@ venv.bak/
 **/source_location_config.yaml
 **/destination_location_config.yaml
 /download_temp
+run_sequence_results_downloader*.sh
