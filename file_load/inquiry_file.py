@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 import os
 import time
@@ -11,6 +12,7 @@ from app_error import InquiryError
 from file_load import file_utils as ft
 import xlwt
 import traceback
+import uuid
 
 
 class Inquiry(File):
@@ -358,7 +360,8 @@ class Inquiry(File):
                     cfg_source.update(cfg_source_location.get_whole_dictionary())
 
                 # get temp directory where to save the received file
-                dest_temp_dir = cfg_source.get_value('Location/temp_dir')
+                dest_temp_dir = str(Path(cfg_source.get_value('Location/temp_dir')) / uuid.uuid4().hex)
+                dest_temp_dir_unarchive = str(Path(dest_temp_dir) / uuid.uuid4().hex)
                 # get file_id index position (in the google drive share link) if applicable
                 file_id_index = cfg_source.get_value('url/file_id_index')
                 # get flag defining if the temp files can be deleted after use
@@ -387,22 +390,38 @@ class Inquiry(File):
                             dest_replace_path = cfg_destination.get_value('Location/path_to_replace')
                             dest_mountpoint_path = cfg_destination.get_value('Location/path_local_mountpoint')
                             destination_path = str(Path(dest_path.replace(dest_replace_path, dest_mountpoint_path)))
+                            destination_path = cm.get_unique_dir_name_with_datestamp(destination_path)
 
                             if ft.interpret_cfg_bool_value(unarchive):
                                 # proceed here with un-archiving of the downloaded file
-                                self.logger.info('Starting an un-archiving of the downloaded file. '
-                                                 'The outcome of the un-archiving will be saved to: {}'
-                                                 .format(destination_path))
+                                self.logger.info('Starting an un-archiving of the downloaded file.')
 
                                 downloaded_file_unarchived = False
                                 # verify the archive type
                                 if downloaded_file.endswith(('zip', 'rar', 'tar', 'bzip2', 'gzip')):
                                     # proceed here with supported files
                                     self.logger.info('The downloaded file was recognized as a supported archive.')
-                                    arc_out = cm.unarchive(downloaded_file, destination_path)
+                                    arc_out = cm.unarchive(downloaded_file, dest_temp_dir_unarchive)
                                     if not arc_out:
                                         # no error reported during unzipping
-                                        self.logger.info('Un-archiving of the downloaded file was successful.')
+                                        self.logger.info('Un-archiving of the downloaded file to the following '
+                                                         'temp location was successful: {}'
+                                                         .format(dest_temp_dir_unarchive))
+
+                                        # copy un-archived content to the destination
+                                        copy_out = cm.copy_dir(dest_temp_dir_unarchive, destination_path)
+                                        if not copy_out:
+                                            # no errors were reported during copying
+                                            self.logger.info(
+                                                'Successfully copied the un-archived content from {} to {}'
+                                                    .format(dest_temp_dir_unarchive, destination_path))
+                                        else:
+                                            self.disqualify_inquiry_item(cur_row + 1, copy_out, inq_line)
+                                            self.logger.error('The following errors were reported during copying of '
+                                                              'un-archived content and the row #{} was disqualified. '
+                                                              'Source dir: {}; destination dir: {}'
+                                                              .format(cur_row + 1, copy_out,
+                                                                      dest_temp_dir_unarchive, destination_path))
                                         downloaded_file_unarchived = True
                                     else:
                                         self.disqualify_inquiry_item(cur_row + 1, arc_out, inq_line)
@@ -428,11 +447,11 @@ class Inquiry(File):
 
                         # based on the config settings, delete the temp file after it was used
                         if delete_temp_file:
-                            if cm.file_exists(downloaded_file):
+                            if cm.file_exists(dest_temp_dir):
                                 try:
-                                    os.remove(downloaded_file)
-                                    self.logger.info('Downloaded file from the temp directory was deleted: {}'
-                                                     .format(downloaded_file))
+                                    shutil.rmtree(dest_temp_dir)
+                                    self.logger.info('Downloaded file (with its temp directory) was deleted: {}'
+                                                     .format(dest_temp_dir))
                                 except Exception as ex:
                                     # report unexpected error during deleting the temp file
                                     _str = 'Unexpected Error occurred (row #{}) during an attempt to delete the temp file {}: {}\n{} ' \
@@ -495,7 +514,7 @@ class Inquiry(File):
             return True
         else:
             _str = 'An error was produced during moving the downloaded file and the row #{} ' \
-                   'was disqualified: {} to: {}. Error: {}' \
+                   'was disqualified. Source: {}; destination to: {}. \n Error: {}' \
                 .format(cur_row + 1, downloaded_file, dest_file_path, move_out)
             self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
             self.logger.error(_str)

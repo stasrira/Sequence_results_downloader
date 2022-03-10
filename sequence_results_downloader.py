@@ -146,7 +146,7 @@ def process_sequence_download_inquiries():
 
                     inq_proc_cnt += 1
 
-                    # identify if any errors were identified and set status variable accordingly
+                    # check if any errors were identified and set status variable accordingly
                     if not inq_obj.error.exist():
                         if not inq_obj.disqualified_items:
                             # no disqualified sub-aliquots present

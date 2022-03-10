@@ -39,8 +39,8 @@ def interpret_cfg_bool_value (value):
     if value:
         if isinstance(value, bool):
             out = value
-        elif str(value).lower() in ['true', 'yes']:
+        elif str(value).lower() in ['true', 'yes', '1']:
             out = True
-        elif str(value).lower() in ['false', 'no']:
+        elif str(value).lower() in ['false', 'no', '0']:
             out = False
     return out

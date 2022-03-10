@@ -3,8 +3,9 @@ from jinja2 import Environment, FileSystemLoader
 import os, traceback
 from utils import global_const as gc
 import gdown_local
-import shutil
+import distutils.dir_util as dru , distutils.file_util as flu
 import patoolib
+import time
 
 
 def get_project_root():
@@ -130,13 +131,38 @@ def move_file_to_processed(file_path, new_file_name, processed_dir_path, log_obj
 
 def move_file(file_path, new_file_path):
     if file_exists(file_path):
+        dest_dir = os.path.dirname(new_file_path)
+        # if not file_exists(dest_dir):
+        verify_and_create_dir(dest_dir)
         try:
-            shutil.move(file_path, new_file_path)
+            # shutil.move(file_path, new_file_path)
+            flu.move_file(file_path, new_file_path)
             return None
         except Exception as ex:
-            _str = 'Error occurred during moving the file "{}" to processed folder. \nError: {}\n{}'.format(
+            _str = 'Error occurred during moving the file "{}" to destination folder. \nError: {}\n{}'.format(
                 str(file_path), ex, traceback.format_exc())
             return _str
+
+def copy_dir(src_path, dest_path):
+    if file_exists(src_path):
+        try:
+            dru.copy_tree(src_path, dest_path)
+            return None
+        except Exception as ex:
+            _str = 'Error occurred during copying content of the directory ({}) to the ' \
+                   'destination: {} \nError: {}\n{}'\
+                .format(str(src_path), str(dest_path), ex, traceback.format_exc())
+            return _str
+
+def get_unique_dir_name_with_datestamp(destination):
+    ts = time.strftime("%Y%m%d_%H%M%S", time.localtime())  # datetime stamp
+    dest_path = str(Path(destination) / ts)
+    dest_path_check = dest_path
+    counter = 1
+    while os.path.exists(dest_path_check):
+        dest_path_check = str(Path('{}({})'.format(dest_path, counter)))
+        counter += 1
+    return dest_path_check
 
 def verify_and_create_dir(dir, mode = None):
     if mode is None:
