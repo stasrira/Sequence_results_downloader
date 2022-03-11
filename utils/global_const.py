@@ -5,6 +5,7 @@ CONFIG_FILE_LOCATION = 'configs/location_config.yaml'
 CONFIG_FILE_DICTIONARY = 'configs/dict_config.yaml'
 CONFIG_FILE_SOURCE_PATH = 'configs/download_sources/{source_id}/default/source_config.yaml'
 CONFIG_FILE_SOURCE_LOCATION_PATH = 'configs/download_sources/{source_id}/source_location_config.yaml'
+CONFIG_FILE_DESTINATION = 'configs/destinations/{destination_id}/default/destination_config.yaml'
 CONFIG_FILE_DESTINATION_LOCATION_PATH = 'configs/destinations/{destination_id}/destination_location_config.yaml'
 
 # default values of flags affecting replacing special characters in field's headers

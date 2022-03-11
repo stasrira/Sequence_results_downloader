@@ -3,7 +3,8 @@ from jinja2 import Environment, FileSystemLoader
 import os, traceback
 from utils import global_const as gc
 import gdown_local
-import distutils.dir_util as dru , distutils.file_util as flu
+import distutils.dir_util as dru  # , distutils.file_util as flu
+import shutil
 import patoolib
 import time
 
@@ -135,8 +136,8 @@ def move_file(file_path, new_file_path):
         # if not file_exists(dest_dir):
         verify_and_create_dir(dest_dir)
         try:
-            # shutil.move(file_path, new_file_path)
-            flu.move_file(file_path, new_file_path)
+            shutil.move(file_path, new_file_path)  # will overwrite existing files
+            # flu.move_file(file_path, new_file_path)  # seems not overwriting file in the destination
             return None
         except Exception as ex:
             _str = 'Error occurred during moving the file "{}" to destination folder. \nError: {}\n{}'.format(

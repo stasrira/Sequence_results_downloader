@@ -327,11 +327,13 @@ class Inquiry(File):
             # load configuration for the source
             cfg_source = ConfigData(Path(cfg_source_path))
 
+            cfg_destination_path = gc.CONFIG_FILE_DESTINATION.replace('{destination_id}', dest_name)
             # get the destination location config file path
             cfg_destination_location_path = gc.CONFIG_FILE_DESTINATION_LOCATION_PATH\
                 .replace('{destination_id}', dest_name)
             # load configuration for the destination
-            cfg_destination = ConfigData(Path(cfg_destination_location_path))
+            cfg_destination = ConfigData(Path(cfg_destination_path))
+            # cfg_destination = ConfigData(Path(cfg_destination_location_path))
 
             # validate that source config was loaded
             if not cfg_source.loaded:
@@ -342,12 +344,13 @@ class Inquiry(File):
                 self.disqualify_inquiry_item(cur_row, _str, inq_line)
                 self.logger.warning(_str)
                 continue
+
             # validate that destination config was loaded
             if not cfg_destination.loaded:
                 _str = 'Destination config file for the row #{} (destination: {}) cannot be loaded ' \
                        'and the row was disqualified. ' \
                        'The expected to exist file is not accessible: {}' \
-                    .format(cur_row + 1, dest_name, cfg_destination_location_path)
+                    .format(cur_row + 1, dest_name, cfg_destination_path)
                 self.disqualify_inquiry_item(cur_row, _str, inq_line)
                 self.logger.warning(_str)
                 continue
@@ -359,6 +362,14 @@ class Inquiry(File):
                     # if the source location config was loaded, update cfg_source config with the source location config
                     cfg_source.update(cfg_source_location.get_whole_dictionary())
 
+            if cfg_destination.loaded:
+                # load destination location config with location specific settings for the current source
+                cfg_destination_location = ConfigData(Path(cfg_destination_location_path))
+                if cfg_destination_location.loaded:
+                    # if the source location config was loaded, update cfg_source config with the source location config
+                    cfg_destination.update(cfg_destination_location.get_whole_dictionary())
+
+            if cfg_source.loaded and cfg_destination.loaded:
                 # get temp directory where to save the received file
                 dest_temp_dir = str(Path(cfg_source.get_value('Location/temp_dir')) / uuid.uuid4().hex)
                 dest_temp_dir_unarchive = str(Path(dest_temp_dir) / uuid.uuid4().hex)
@@ -389,8 +400,15 @@ class Inquiry(File):
                             # prepare the destination path for the downloaded file
                             dest_replace_path = cfg_destination.get_value('Location/path_to_replace')
                             dest_mountpoint_path = cfg_destination.get_value('Location/path_local_mountpoint')
+                            # apply local mount point settings to the destination path
                             destination_path = str(Path(dest_path.replace(dest_replace_path, dest_mountpoint_path)))
-                            destination_path = cm.get_unique_dir_name_with_datestamp(destination_path)
+
+                            # get config value for dest_unique_dir flag
+                            dest_unique_dir = cfg_destination.get_value(
+                                'data_structure/save_in_unique_datetimestamp_dir')
+                            if dest_unique_dir:
+                                # modify destination path by adding datetime stamp folder to it
+                                destination_path = cm.get_unique_dir_name_with_datestamp(destination_path)
 
                             if ft.interpret_cfg_bool_value(unarchive):
                                 # proceed here with un-archiving of the downloaded file
