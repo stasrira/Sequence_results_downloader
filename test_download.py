@@ -10,8 +10,8 @@ import gdown
 
 
 def test_gdown(file_id, destination_dir = None, file_name = None):
-    # import gdown
-    import gdown_local
+    # import gdown as gd
+    import gdown_local as gd
     # url = 'https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU'
     # url = 'https://drive.google.com/file/d/1ZvekhXpv31zdF83CeCkY9Qqra47lItlt/view?usp=sharing'
     # id = '1ZvekhXpv31zdF83CeCkY9Qqra47lItlt'
@@ -21,7 +21,7 @@ def test_gdown(file_id, destination_dir = None, file_name = None):
         destination_dir = prj_wrkdir
 
     if not os.path.exists(destination_dir):
-        mode = 0o666  # read and write for all users and groups
+        mode = 0o766  # read and write for all users and groups
         os.mkdir(destination_dir, mode)
 
     if file_name is None:
@@ -29,7 +29,7 @@ def test_gdown(file_id, destination_dir = None, file_name = None):
     else:
         output = str(Path(destination_dir) / file_name)
 
-    final_file = gdown_local.download(id = file_id, output = output, quiet=False)
+    final_file = gd.download(id = file_id, output = output, quiet=False)
     # print (final_file)
     return final_file
 
@@ -132,7 +132,6 @@ if __name__ == '__main__':
     import time
     print (time.strftime("%Y%m%d_%H%M%S", time.localtime()))
 
-    # download_file_from_google_drive(file_id, dld_dest_dir)
     download_fn = test_gdown(file_id, dld_dest_dir)
 
     print ('Downloaded file: {}'.format(download_fn))
