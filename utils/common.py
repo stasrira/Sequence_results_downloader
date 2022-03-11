@@ -166,7 +166,7 @@ def get_unique_dir_name_with_datestamp(destination):
 
 def verify_and_create_dir(dir, mode = None):
     if mode is None:
-        mode = 0o666  # read and write for all users and groups
+        mode = 0o766  # full for the user and read and write for groups and others
     if not os.path.exists(dir):
         # create dir if it does not exist
         os.mkdir(dir, mode)
