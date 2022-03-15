@@ -1,4 +1,4 @@
 data_structure:
   # this flag defines if the data being saved to the destination will be put into a uniquely named directories named as datetime stamp
   # this should help to encapsulate data for each download from each other
-  save_in_unique_datetimestamp_dir: False
+  save_in_unique_datetimestamp_dir: True

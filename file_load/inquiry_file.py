@@ -408,7 +408,8 @@ class Inquiry(File):
                                 'data_structure/save_in_unique_datetimestamp_dir')
                             if dest_unique_dir:
                                 # modify destination path by adding datetime stamp folder to it
-                                destination_path = cm.get_unique_dir_name_with_datestamp(destination_path)
+                                destination_path = cm.get_unique_dir_name_with_datestamp(
+                                    destination_path, downloaded_file)
 
                             if ft.interpret_cfg_bool_value(unarchive):
                                 # proceed here with un-archiving of the downloaded file

@@ -215,13 +215,12 @@ def process_sequence_download_inquiries():
 
         mlog.info('Number of successfully processed Inquiries = {}'.format(inq_proc_cnt))
 
-        mlog.info('Preparing to send notificatoin email.')
-
         email_to = m_cfg.get_value('Email/send_to_emails')
         email_subject = 'processing of Sequence results download inquiry. '
 
         if inq_proc_cnt > 0:  # inquiries and len(inquiries) > 0:
             # collect final details and send email about this study results
+            mlog.info('Preparing to send notificatoin email.')
 
             err_present = errors_present.split('|') # get all statuses into an array; 1st element is the main status
             if err_present:
@@ -268,7 +267,11 @@ def process_sequence_download_inquiries():
                     .format(ex, inq_path, os.path.abspath(__file__), traceback.format_exc())
                 mlog.critical(_str)
 
-            mlog.info('End of processing of download inquiries in "{}".'.format(inquiries_path))
+        else:
+            # finish processing without sending notification email
+            mlog.info('Since no inquiries were processed, no notificatoin emails will be sent.')
+
+        mlog.info('End of processing of download inquiries in "{}".'.format(inquiries_path))
 
     except Exception as ex:
         # report unexpected error to log file

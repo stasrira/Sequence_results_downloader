@@ -155,14 +155,21 @@ def copy_dir(src_path, dest_path):
                 .format(str(src_path), str(dest_path), ex, traceback.format_exc())
             return _str
 
-def get_unique_dir_name_with_datestamp(destination):
-    ts = time.strftime("%Y%m%d_%H%M%S", time.localtime())  # datetime stamp
-    dest_path = str(Path(destination) / ts)
+def get_unique_dir_name_with_datestamp(destination, downloaded_path = None):
+    if downloaded_path is None:
+        arch_name = ''
+    else:
+        # if path to the file is provided, get file name and include it to the unique dir name
+        arch_name = '_' + Path(downloaded_path).stem
+    ts = time.strftime("%Y%m%d_%H%M%S", time.localtime())  # get datetime stamp
+    dest_path = str(Path(destination) / (ts + arch_name))  # combine dir name
     dest_path_check = dest_path
+    # check if the desired dir name already exists and update it if it is
     counter = 1
     while os.path.exists(dest_path_check):
         dest_path_check = str(Path('{}({})'.format(dest_path, counter)))
         counter += 1
+
     return dest_path_check
 
 def verify_and_create_dir(dir, mode = None):
