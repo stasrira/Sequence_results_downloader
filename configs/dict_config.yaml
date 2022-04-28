@@ -7,6 +7,13 @@ inquiry_file_structure:
 
 download_source:
     googledrive: GoogleDrive
+    nextseq: NextSeq
+
+local_network_sources:
+    nextseq: True
+    miseq: True
+    minerva: True
 
 destination_name:
     box: box
+    minerva: Minerva

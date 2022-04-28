@@ -37,8 +37,6 @@ class Inquiry(File):
         self.logger.info('Start working with Sequence Results Download Inquiry file {}'.format(filepath))
         self.inq_processed_items = {}
         self.columns_arr = []
-        # self.inq_sources = {}
-        # self.inq_line_sources = {}
 
         # load common for all programs dictionary config
         self.conf_dict = DictConfigData(gc.CONFIG_FILE_DICTIONARY)
@@ -290,12 +288,12 @@ class Inquiry(File):
         self.logger.info('Start processing inquiry file\'s rows.')
         cur_row = -1  # rows counter
         for inq_line in self.lines_arr:
-            # set default values for local variables
-            destination_path = None
-            downloaded_file = None
-            downloaded_file_unarchived = None
-            downloaded_file_copied = None
-            temp_file_deleted = None
+            # # set default values for local variables
+            # destination_path = None
+            # downloaded_file = None
+            # downloaded_file_unarchived = None
+            # downloaded_file_copied = None
+            # temp_file_deleted = None
 
             cur_row += 1
             if cur_row == self.header_row_num - 1:
@@ -307,30 +305,30 @@ class Inquiry(File):
                 self.logger.info('Row #{} was skipped as disqualified'.format(cur_row + 1))
                 continue
 
-            # get values of the current inquiry row
-            self.logger.info('Row #{} will be attempted to be downloaded: {}'.format(cur_row + 1, inq_line))
-            # get download source assigned to the current row
-            dld_src = self.get_inquiry_value_by_field_name('download_source', inq_line)
-            # get download source url assigned to the current row
-            dld_src_url = self.get_inquiry_value_by_field_name('url', inq_line, False)
-            # get destination name assigned to the current row
-            dest_name = self.get_inquiry_value_by_field_name('destination_name', inq_line)
-            # get destination directory path assigned to the current row
-            dest_path = self.get_inquiry_value_by_field_name('destination_dir_path', inq_line, False)
-            # get unarchive_downloaded flag assigned to the current row
-            unarchive = self.get_inquiry_value_by_field_name('unarchive_downloaded', inq_line, False)
+            inquiry_line_details = {
+                # get download source assigned to the current row
+                'dld_src': self.get_inquiry_value_by_field_name('download_source', inq_line),
+                # get download source url/path assigned to the current row
+                'dld_src_url': self.get_inquiry_value_by_field_name('url', inq_line, False),
+                # get destination name assigned to the current row
+                'dest_name': self.get_inquiry_value_by_field_name('destination_name', inq_line),
+                # get destination directory path assigned to the current row
+                'dest_path': self.get_inquiry_value_by_field_name('destination_dir_path', inq_line, False),
+                # get unarchive_downloaded flag assigned to the current row
+                'unarchive': self.get_inquiry_value_by_field_name('unarchive_downloaded', inq_line, False)
+            }
 
             # get the source config file path
-            cfg_source_path = gc.CONFIG_FILE_SOURCE_PATH.replace('{source_id}', dld_src)
+            cfg_source_path = gc.CONFIG_FILE_SOURCE_PATH.replace('{source_id}', inquiry_line_details['dld_src'])
             # get the source location config file path
-            cfg_source_location_path = gc.CONFIG_FILE_SOURCE_LOCATION_PATH.replace('{source_id}', dld_src)
+            cfg_source_location_path = gc.CONFIG_FILE_SOURCE_LOCATION_PATH.replace('{source_id}', inquiry_line_details['dld_src'])
             # load configuration for the source
             cfg_source = ConfigData(Path(cfg_source_path))
 
-            cfg_destination_path = gc.CONFIG_FILE_DESTINATION.replace('{destination_id}', dest_name)
+            cfg_destination_path = gc.CONFIG_FILE_DESTINATION.replace('{destination_id}', inquiry_line_details['dest_name'])
             # get the destination location config file path
             cfg_destination_location_path = gc.CONFIG_FILE_DESTINATION_LOCATION_PATH\
-                .replace('{destination_id}', dest_name)
+                .replace('{destination_id}', inquiry_line_details['dest_name'])
             # load configuration for the destination
             cfg_destination = ConfigData(Path(cfg_destination_path))
             # cfg_destination = ConfigData(Path(cfg_destination_location_path))
@@ -340,7 +338,7 @@ class Inquiry(File):
                 _str = 'Datasource config file for the row #{} (source: {}) cannot be loaded ' \
                        'and the row was disqualified. ' \
                        'The expected to exist file is not accessible: {}' \
-                    .format(cur_row + 1, dld_src, cfg_source_path)
+                    .format(cur_row + 1, inquiry_line_details['dld_src'], cfg_source_path)
                 self.disqualify_inquiry_item(cur_row, _str, inq_line)
                 self.logger.warning(_str)
                 continue
@@ -350,7 +348,7 @@ class Inquiry(File):
                 _str = 'Destination config file for the row #{} (destination: {}) cannot be loaded ' \
                        'and the row was disqualified. ' \
                        'The expected to exist file is not accessible: {}' \
-                    .format(cur_row + 1, dest_name, cfg_destination_path)
+                    .format(cur_row + 1, inquiry_line_details['dest_name'], cfg_destination_path)
                 self.disqualify_inquiry_item(cur_row, _str, inq_line)
                 self.logger.warning(_str)
                 continue
@@ -370,145 +368,22 @@ class Inquiry(File):
                     cfg_destination.update(cfg_destination_location.get_whole_dictionary())
 
             if cfg_source.loaded and cfg_destination.loaded:
-                # get temp directory where to save the received file
-                dest_temp_dir = str(Path(cfg_source.get_value('Location/temp_dir')) / uuid.uuid4().hex)
-                dest_temp_dir_unarchive = str(Path(dest_temp_dir) / uuid.uuid4().hex)
-                # get file_id index position (in the google drive share link) if applicable
-                file_id_index = cfg_source.get_value('url/file_id_index')
-                # get flag defining if the temp files can be deleted after use
-                delete_temp_file = ft.interpret_cfg_bool_value(cfg_source.get_value('temp_file/delete_after_use'))
+                if inquiry_line_details['dld_src'] and inquiry_line_details['dld_src'].lower() == 'googledrive':
 
-                self.logger.info('Starting downloading. URL: {} | Destination: {}'.format(dld_src_url, dest_temp_dir))
-
-                if dld_src and dld_src.lower() == 'googledrive':
-                    # proceed with the actual downloading of the file from google drive
-                    downloaded_file, download_error = cm.gdown_get_file(dld_src_url,dest_temp_dir,
-                                                                        file_id_index, self.logger)
+                    self.process_google_drive_inquiry(inquiry_line_details, cfg_source, cfg_destination,
+                                                      cur_row, inq_line)
+                # this checks if the current source is listed in the "local_network_sources" section of the dictionary
+                elif inquiry_line_details['dld_src'] \
+                        and self.conf_dict.get_dict_value (inquiry_line_details['dld_src'].lower(), 'local_network_sources')[1]:
+                    self.process_local_network_inquiry(inquiry_line_details, cfg_source, cfg_destination,
+                                                      cur_row, inq_line)
                 else:
                     _str = 'Unexpected Download Source "{}" was provided for the row #{}; ' \
                            'the row was disqualified. ' \
-                        .format(dld_src, cur_row + 1)
+                        .format(inquiry_line_details['dld_src'], cur_row + 1)
                     self.disqualify_inquiry_item(cur_row, _str, inq_line)
                     self.logger.warning(_str)
                     continue
-
-                if download_error is None:
-                    self.logger.info('Downloading attempt was finished without errors. Downloaded file name: {}'
-                                     .format(downloaded_file))
-                    if downloaded_file:
-                        if cfg_destination:  # make sure destination config is loaded
-                            # prepare the destination path for the downloaded file
-                            dest_replace_path = cfg_destination.get_value('Location/path_to_replace')
-                            dest_mountpoint_path = cfg_destination.get_value('Location/path_local_mountpoint')
-                            # apply local mount point settings to the destination path
-                            destination_path = str(Path(dest_path.replace(dest_replace_path, dest_mountpoint_path)))
-
-                            # get config value for dest_unique_dir flag
-                            dest_unique_dir = cfg_destination.get_value(
-                                'data_structure/save_in_unique_datetimestamp_dir')
-                            if dest_unique_dir:
-                                # modify destination path by adding datetime stamp folder to it
-                                destination_path = cm.get_unique_dir_name_with_datestamp(
-                                    destination_path, downloaded_file)
-
-                            if ft.interpret_cfg_bool_value(unarchive):
-                                # proceed here with un-archiving of the downloaded file
-                                self.logger.info('Starting an un-archiving of the downloaded file.')
-
-                                downloaded_file_unarchived = False
-                                # verify the archive type
-                                if downloaded_file.endswith(('zip', 'rar', 'tar', 'bzip2', 'gzip')):
-                                    # proceed here with supported files
-                                    self.logger.info('The downloaded file was recognized as a supported archive.')
-                                    arc_out = cm.unarchive(downloaded_file, dest_temp_dir_unarchive)
-                                    if not arc_out:
-                                        # no error reported during unzipping
-                                        self.logger.info('Un-archiving of the downloaded file to the following '
-                                                         'temp location was successful: {}'
-                                                         .format(dest_temp_dir_unarchive))
-
-                                        # copy un-archived content to the destination
-                                        copy_out = cm.copy_dir(dest_temp_dir_unarchive, destination_path)
-                                        if not copy_out:
-                                            # no errors were reported during copying
-                                            self.logger.info(
-                                                'Successfully copied the un-archived content from {} to {}'
-                                                    .format(dest_temp_dir_unarchive, destination_path))
-                                        else:
-                                            self.disqualify_inquiry_item(cur_row + 1, copy_out, inq_line)
-                                            self.logger.error('The following errors were reported during copying of '
-                                                              'un-archived content and the row #{} was disqualified. '
-                                                              'Source dir: {}; destination dir: {}'
-                                                              .format(cur_row + 1, copy_out,
-                                                                      dest_temp_dir_unarchive, destination_path))
-                                        downloaded_file_unarchived = True
-                                    else:
-                                        self.disqualify_inquiry_item(cur_row + 1, arc_out, inq_line)
-                                        self.logger.error('The following errors were reported during un-archiving '
-                                                          'and the row #{} was disqualified.'
-                                                          .format(cur_row+1, arc_out))
-                                else:
-                                    # provided format is not supported
-                                    _str = 'Archive format of the downloaded file is not supported - cannot ' \
-                                           'perform un-archiving (as per config setting). The downloaded file ' \
-                                           'will be copied instead.'
-                                    self.logger.warning(_str)
-                                    # since un-archiving cannot be performed, move the downloaded file to destination
-                                    downloaded_file_copied = \
-                                        self.copy_donwloaded_file_to_destination(downloaded_file, destination_path,
-                                                                             cur_row, inq_line)
-                                pass
-                            else:
-                                # proceed here with copying the file to the destination location
-                                downloaded_file_copied = \
-                                    self.copy_donwloaded_file_to_destination(downloaded_file, destination_path,
-                                                                         cur_row, inq_line)
-
-                        # based on the config settings, delete the temp file after it was used
-                        if delete_temp_file:
-                            if cm.file_exists(dest_temp_dir):
-                                try:
-                                    shutil.rmtree(dest_temp_dir)
-                                    self.logger.info('Downloaded file (with its temp directory) was deleted: {}'
-                                                     .format(dest_temp_dir))
-                                except Exception as ex:
-                                    # report unexpected error during deleting the temp file
-                                    _str = 'Unexpected Error occurred (row #{}) during an attempt to delete the temp file {}: {}\n{} ' \
-                                        .format(cur_row+1, downloaded_file, ex, traceback.format_exc())
-                                    self.logger.error(_str)
-
-                            # verify that the file was actually delete and set the flag appropriately
-                            if not cm.file_exists(downloaded_file):
-                                temp_file_deleted = True
-                            else:
-                                temp_file_deleted = False
-
-                        processed_row_details = {
-                            # 'row_num': cur_row + 1,
-                            'dld_src': dld_src,
-                            'dld_src_url': dld_src_url,
-                            'dest_name': dest_name,
-                            'dest_path': dest_path,
-                            'unarchive': unarchive,
-                            'downloaded_file': downloaded_file,
-                            'destination_path': destination_path,
-                            'downloaded_file_unarchived': downloaded_file_unarchived,
-                            'downloaded_file_copied': downloaded_file_copied,
-                            'temp_file_deleted': temp_file_deleted,
-                            # 'disqualified': True if (cur_row + 1) in self.disqualified_items else False
-                        }
-                        self.inq_processed_items[cur_row + 1] = processed_row_details
-                    else:
-                        _str = 'Unexpectedly the path for the downloaded file was not received from the "gdown" ' \
-                               'module, while no other errors were reported.'
-                        self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
-                        self.logger.error(_str)
-
-                else:
-                    self.logger.warning('Downloading attempt was finished with errors')
-                    self.logger.error(download_error)
-                    # self.error.add_error(download_error)
-                    self.disqualify_inquiry_item(cur_row+1, download_error, inq_line)
 
         # if some inquiry rows were disqualified, create a file to re-process them
         self.create_inquiry_file_for_disqualified_entries()
@@ -522,17 +397,231 @@ class Inquiry(File):
             _str = 'Processing of the current inquiry was finished successfully.\n'
             self.logger.info(_str)
 
+    # processes inquiries that are qualified as the local network ones
+    def process_local_network_inquiry(self, inquiry_line_details, cfg_source, cfg_destination, cur_row, inq_line):
+        download_completed = False
+
+        if cfg_destination:  # make sure destination config is loaded
+            # prepare the source path of the downloaded data
+            source_replace_path = cfg_source.get_value('Location/path_to_replace')
+            source_mountpoint_path = cfg_source.get_value('Location/path_local_mountpoint')
+            # apply local mount point settings to the destination path
+            source_path = \
+                str(Path(inquiry_line_details['dld_src_url'].replace(source_replace_path, source_mountpoint_path)))
+
+            # prepare the destination path for the downloaded file
+            dest_replace_path = cfg_destination.get_value('Location/path_to_replace')
+            dest_mountpoint_path = cfg_destination.get_value('Location/path_local_mountpoint')
+            # apply local mount point settings to the destination path
+            destination_path = \
+                str(Path(inquiry_line_details['dest_path'].replace(dest_replace_path, dest_mountpoint_path)))
+
+            # get config value for dest_unique_dir flag
+            dest_unique_dir = cfg_destination.get_value(
+                'data_structure/save_in_unique_datetimestamp_dir')
+            if dest_unique_dir:
+                # modify destination path by adding datetime stamp folder to it
+                destination_path = cm.get_unique_dir_name_with_datestamp(destination_path, source_path)
+
+            if os.path.exists(source_path):
+                if os.path.isdir(source_path):
+                    # copy source directory to the destination
+                    copy_out = cm.copy_dir(source_path, destination_path)
+                    if not copy_out:
+                        # no errors were reported during copying
+                        download_completed = True
+                        self.logger.info(
+                            'Successfully copied the source content from {} to {}'
+                                .format(source_path, destination_path))
+                    else:
+                        self.disqualify_inquiry_item(cur_row + 1, copy_out, inq_line)
+                        self.logger.error('The following errors were reported during copying of '
+                                          'the source content and the row #{} was disqualified. '
+                                          'Source: {}; destination: {}'
+                                          .format(cur_row + 1, copy_out,
+                                                  source_path, destination_path))
+                else:
+                    # copy source file to the destination
+                    download_completed = \
+                        self.copy_donwloaded_file_to_destination(source_path, destination_path,
+                                                                 cur_row, inq_line)
+
+                processed_row_details = {
+                    # 'row_num': cur_row + 1,
+                    'dld_src': inquiry_line_details['dld_src'],
+                    'dld_src_url': '{} (actual path:{})'.format(inquiry_line_details['dld_src_url'],source_path),
+                    'dest_name': inquiry_line_details['dest_name'],
+                    # 'dest_path': destination_path,
+                    'unarchive': 'N/A',
+                    'downloaded_file': 'N/A',
+                    'destination_path': '{} --> actual path: {}'.format(inquiry_line_details['dest_path'],destination_path),
+                    'downloaded_file_unarchived': 'N/A',
+                    'downloaded_file_copied': download_completed,
+                    'temp_file_deleted': 'N/A',
+                    # 'disqualified': True if (cur_row + 1) in self.disqualified_items else False
+                }
+                self.inq_processed_items[cur_row + 1] = processed_row_details
+            else:
+                _str = 'Expected to exist source data at the following path was not present: {}'.format(source_path)
+                self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
+                self.logger.error('Row #{} was disqualified due to the following error - {}'
+                                  .format(cur_row + 1, _str))
+        pass
+
+    # processes inquiries with the Google Drive source
+    def process_google_drive_inquiry(self, inquiry_line_details, cfg_source, cfg_destination, cur_row, inq_line):
+        # set default values for local variables
+        destination_path = None
+        downloaded_file = None
+        downloaded_file_unarchived = None
+        downloaded_file_copied = None
+        temp_file_deleted = None
+
+        # get temp directory where to save the received file
+        dest_temp_dir = str(Path(cfg_source.get_value('Location/temp_dir')) / uuid.uuid4().hex)
+        dest_temp_dir_unarchive = str(Path(dest_temp_dir) / uuid.uuid4().hex)
+        # get file_id index position (in the google drive share link) if applicable
+        file_id_index = cfg_source.get_value('url/file_id_index')
+        # get flag defining if the temp files can be deleted after use
+        delete_temp_file = ft.interpret_cfg_bool_value(cfg_source.get_value('temp_file/delete_after_use'))
+
+        self.logger.info('Starting downloading. URL: {} | Destination: {}'
+                         .format(inquiry_line_details['dld_src_url'], dest_temp_dir))
+
+        # proceed with the actual downloading of the file from google drive
+        downloaded_file, download_error = cm.gdown_get_file(
+            inquiry_line_details['dld_src_url'], dest_temp_dir, file_id_index, self.logger)
+
+        if download_error is None:
+            self.logger.info('Downloading attempt was finished without errors. Downloaded file name: {}'
+                             .format(downloaded_file))
+            if downloaded_file:
+                if cfg_destination:  # make sure destination config is loaded
+                    # prepare the destination path for the downloaded file
+                    dest_replace_path = cfg_destination.get_value('Location/path_to_replace')
+                    dest_mountpoint_path = cfg_destination.get_value('Location/path_local_mountpoint')
+                    # apply local mount point settings to the destination path
+                    destination_path = \
+                        str(Path(inquiry_line_details['dest_path'].replace(dest_replace_path, dest_mountpoint_path)))
+
+                    # get config value for dest_unique_dir flag
+                    dest_unique_dir = cfg_destination.get_value(
+                        'data_structure/save_in_unique_datetimestamp_dir')
+                    if dest_unique_dir:
+                        # modify destination path by adding datetime stamp folder to it
+                        destination_path = cm.get_unique_dir_name_with_datestamp(
+                            destination_path, downloaded_file)
+
+                    if ft.interpret_cfg_bool_value(inquiry_line_details['unarchive']):
+                        # proceed here with un-archiving of the downloaded file
+                        self.logger.info('Starting an un-archiving of the downloaded file.')
+
+                        downloaded_file_unarchived = False
+                        # verify the archive type
+                        if downloaded_file.endswith(('zip', 'rar', 'tar', 'bzip2', 'gzip')):
+                            # proceed here with supported files
+                            self.logger.info('The downloaded file was recognized as a supported archive.')
+                            arc_out = cm.unarchive(downloaded_file, dest_temp_dir_unarchive)
+                            if not arc_out:
+                                # no error reported during unzipping
+                                self.logger.info('Un-archiving of the downloaded file to the following '
+                                                 'temp location was successful: {}'
+                                                 .format(dest_temp_dir_unarchive))
+
+                                # copy un-archived content to the destination
+                                copy_out = cm.copy_dir(dest_temp_dir_unarchive, destination_path)
+                                if not copy_out:
+                                    # no errors were reported during copying
+                                    self.logger.info(
+                                        'Successfully copied the un-archived content from {} to {}'
+                                            .format(dest_temp_dir_unarchive, destination_path))
+                                else:
+                                    self.disqualify_inquiry_item(cur_row + 1, copy_out, inq_line)
+                                    self.logger.error('The following errors were reported during copying of '
+                                                      'un-archived content and the row #{} was disqualified. '
+                                                      'Source dir: {}; destination dir: {}'
+                                                      .format(cur_row + 1, copy_out,
+                                                              dest_temp_dir_unarchive, destination_path))
+                                downloaded_file_unarchived = True
+                            else:
+                                self.disqualify_inquiry_item(cur_row + 1, arc_out, inq_line)
+                                self.logger.error('The following errors were reported during un-archiving '
+                                                  'and the row #{} was disqualified: {}'
+                                                  .format(cur_row + 1, arc_out))
+                        else:
+                            # provided format is not supported
+                            _str = 'Archive format of the downloaded file is not supported - cannot ' \
+                                   'perform un-archiving (as per config setting). The downloaded file ' \
+                                   'will be copied instead.'
+                            self.logger.warning(_str)
+                            # since un-archiving cannot be performed, move the downloaded file to destination
+                            downloaded_file_copied = \
+                                self.copy_donwloaded_file_to_destination(downloaded_file, destination_path,
+                                                                         cur_row, inq_line)
+                        pass
+                    else:
+                        # proceed here with copying the file to the destination location
+                        downloaded_file_copied = \
+                            self.copy_donwloaded_file_to_destination(downloaded_file, destination_path,
+                                                                     cur_row, inq_line)
+
+                # based on the config settings, delete the temp file after it was used
+                if delete_temp_file:
+                    if cm.file_exists(dest_temp_dir):
+                        try:
+                            shutil.rmtree(dest_temp_dir)
+                            self.logger.info('Downloaded file (with its temp directory) was deleted: {}'
+                                             .format(dest_temp_dir))
+                        except Exception as ex:
+                            # report unexpected error during deleting the temp file
+                            _str = 'Unexpected Error occurred (row #{}) during an attempt to delete the temp file {}: {}\n{} ' \
+                                .format(cur_row + 1, downloaded_file, ex, traceback.format_exc())
+                            self.logger.error(_str)
+
+                    # verify that the file was actually delete and set the flag appropriately
+                    if not cm.file_exists(downloaded_file):
+                        temp_file_deleted = True
+                    else:
+                        temp_file_deleted = False
+
+                processed_row_details = {
+                    # 'row_num': cur_row + 1,
+                    'dld_src': inquiry_line_details['dld_src'],
+                    'dld_src_url': inquiry_line_details['dld_src_url'],
+                    'dest_name': inquiry_line_details['dest_name'],
+                    # 'dest_path': inquiry_line_details['dest_path'],
+                    'unarchive': inquiry_line_details['unarchive'],
+                    'downloaded_file': downloaded_file,
+                    'destination_path': '{} --> actual path: {}'.format(inquiry_line_details['dest_path'],destination_path),
+                    'downloaded_file_unarchived': downloaded_file_unarchived,
+                    'downloaded_file_copied': downloaded_file_copied,
+                    'temp_file_deleted': temp_file_deleted,
+                    # 'disqualified': True if (cur_row + 1) in self.disqualified_items else False
+                }
+                self.inq_processed_items[cur_row + 1] = processed_row_details
+            else:
+                _str = 'Unexpectedly the path for the downloaded file was not received from the "gdown" ' \
+                       'module, while no other errors were reported.'
+                self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
+                self.logger.error(_str)
+
+        else:
+            self.logger.warning('Downloading attempt was finished with errors')
+            self.logger.error(download_error)
+            # self.error.add_error(download_error)
+            self.disqualify_inquiry_item(cur_row + 1, download_error, inq_line)
+
     def copy_donwloaded_file_to_destination(self, downloaded_file, destination_path, cur_row, inq_line):
         dld_file_name = Path(downloaded_file).name
         dest_file_path = str(Path(destination_path) / dld_file_name)
         move_out = None
         move_out = cm.move_file(downloaded_file, dest_file_path)
         if move_out is None:
-            self.logger.info('The downloaded file: {} was moved to: {}'
+            self.logger.info('The data/downloaded file: {} was moved to: {}'
                              .format(downloaded_file, dest_file_path))
             return True
         else:
-            _str = 'An error was produced during moving the downloaded file and the row #{} ' \
+            _str = 'An error was produced during moving the data/downloaded file and the row #{} ' \
                    'was disqualified. Source: {}; destination to: {}. \n Error: {}' \
                 .format(cur_row + 1, downloaded_file, dest_file_path, move_out)
             self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
