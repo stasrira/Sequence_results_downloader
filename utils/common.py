@@ -144,6 +144,20 @@ def move_file(file_path, new_file_path):
                 str(file_path), ex, traceback.format_exc())
             return _str
 
+def copy_file(file_path, new_file_path):
+    if file_exists(file_path):
+        dest_dir = os.path.dirname(new_file_path)
+        # if not file_exists(dest_dir):
+        verify_and_create_dir(dest_dir)
+        try:
+            shutil.copy(file_path, new_file_path)  # will overwrite existing files
+            # flu.move_file(file_path, new_file_path)  # seems not overwriting file in the destination
+            return None
+        except Exception as ex:
+            _str = 'Error occurred during copyying the file "{}" to destination folder. \nError: {}\n{}'.format(
+                str(file_path), ex, traceback.format_exc())
+            return _str
+
 def copy_dir(src_path, dest_path):
     if file_exists(src_path):
         try:

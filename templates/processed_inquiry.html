@@ -79,12 +79,15 @@
                             <span style="font-weight: bold; ">Final stage:</span>
                         </td>
                         <td>
-                            {% if inquiry.inq_processed_items[item]['downloaded_file_unarchived'] %}
+                            {% if inquiry.inq_processed_items[item]['downloaded_file_unarchived'] == true %}
                                 {{indent_left_0}}<b>Un-archived</b>:
                                 <span style="font-weight: bold; color: green ">Yes</span>
-                            {% else %}
+                            {% elif inquiry.inq_processed_items[item]['downloaded_file_unarchived'] == false %}
                                 {{indent_left_0}}Un-archived:
                                 <span style="font-weight: normal; color: black ">No</span>
+                            {% else %}
+                                {{indent_left_0}}Un-archived:
+                                <span style="font-weight: normal; color: black ">{{inquiry.inq_processed_items[item]['downloaded_file_unarchived']}}</span>
                             {% endif %}
                             <br/>
                             {% if inquiry.inq_processed_items[item]['downloaded_file_copied'] %}
@@ -103,12 +106,15 @@
                         <td>
                             {{indent_left_0}}Path: {{inquiry.inq_processed_items[item]['downloaded_file']}}
                             <br/>
-                            {% if inquiry.inq_processed_items[item]['temp_file_deleted'] %}
+                            {% if inquiry.inq_processed_items[item]['temp_file_deleted'] == true %}
                                 {{indent_left_0}}<b>Deleted on completion</b>:
                                 <span style="font-weight: bold; color: green ">Yes</span>
-                            {% else %}
+                            {% elif inquiry.inq_processed_items[item]['temp_file_deleted'] == false %}
                                 {{indent_left_0}}Deleted on completion:
                                 <span style="font-weight: normal; color: black ">No</span>
+                            {% else %}
+                                {{indent_left_0}}Deleted on completion:
+                                <span style="font-weight: normal; color: black ">{{inquiry.inq_processed_items[item]['temp_file_deleted']}}</span>
                             {% endif %}
                         </td>
                     </tr>
