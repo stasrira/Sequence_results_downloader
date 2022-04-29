@@ -288,13 +288,6 @@ class Inquiry(File):
         self.logger.info('Start processing inquiry file\'s rows.')
         cur_row = -1  # rows counter
         for inq_line in self.lines_arr:
-            # # set default values for local variables
-            # destination_path = None
-            # downloaded_file = None
-            # downloaded_file_unarchived = None
-            # downloaded_file_copied = None
-            # temp_file_deleted = None
-
             cur_row += 1
             if cur_row == self.header_row_num - 1:
                 # skip the header row
@@ -444,7 +437,7 @@ class Inquiry(File):
                     # copy source file to the destination
                     download_completed = \
                         self.copy_donwloaded_file_to_destination(source_path, destination_path,
-                                                                 cur_row, inq_line)
+                                                                 cur_row, inq_line, False)
 
                 processed_row_details = {
                     # 'row_num': cur_row + 1,
@@ -611,14 +604,28 @@ class Inquiry(File):
             # self.error.add_error(download_error)
             self.disqualify_inquiry_item(cur_row + 1, download_error, inq_line)
 
-    def copy_donwloaded_file_to_destination(self, downloaded_file, destination_path, cur_row, inq_line):
+    def copy_donwloaded_file_to_destination(self, downloaded_file, destination_path, cur_row, inq_line, move_file=None):
+        # assign default value to move_file flag
+        if move_file is None:
+            move_file = True
+        if isinstance(move_file, bool):
+            pass  # keep assignment
+        else:
+            # if move_file flag is not boolean, assign default value
+            move_file = True
+
         dld_file_name = Path(downloaded_file).name
         dest_file_path = str(Path(destination_path) / dld_file_name)
         move_out = None
-        move_out = cm.move_file(downloaded_file, dest_file_path)
+        if move_file:
+            move_out = cm.move_file(downloaded_file, dest_file_path)
+        else:
+            move_out = cm.copy_file(downloaded_file, dest_file_path)
         if move_out is None:
-            self.logger.info('The data/downloaded file: {} was moved to: {}'
-                             .format(downloaded_file, dest_file_path))
+            self.logger.info('The data/downloaded file: {} was {} to: {}'
+                             .format(downloaded_file,
+                                     'moved' if move_file else 'copied',
+                                     dest_file_path))
             return True
         else:
             _str = 'An error was produced during moving the data/downloaded file and the row #{} ' \

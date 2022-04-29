@@ -8,6 +8,7 @@ inquiry_file_structure:
 download_source:
     googledrive: GoogleDrive
     nextseq: NextSeq
+    miseq: MiSeq
 
 local_network_sources:
     nextseq: True
