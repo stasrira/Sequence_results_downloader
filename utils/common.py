@@ -193,7 +193,8 @@ def verify_and_create_dir(dir, mode = None):
         mode = 0o766  # full for the user and read and write for groups and others
     if not os.path.exists(dir):
         # create dir if it does not exist
-        os.mkdir(dir, mode)
+        os.mkdir(dir)
+        os.chmod(dir, mode)
 
 def get_google_file_id(url, file_id_index = None):
     # splits url by "/" sign and retrieves the file_id as a particular element from the list
