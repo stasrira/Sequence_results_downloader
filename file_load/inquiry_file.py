@@ -311,6 +311,8 @@ class Inquiry(File):
                 'unarchive': self.get_inquiry_value_by_field_name('unarchive_downloaded', inq_line, False)
             }
 
+            self.logger.info('Processing row #{}. Rows details: {}'.format(cur_row + 1, inquiry_line_details))
+
             # get the source config file path
             cfg_source_path = gc.CONFIG_FILE_SOURCE_PATH.replace('{source_id}', inquiry_line_details['dld_src'])
             # get the source location config file path
@@ -327,7 +329,10 @@ class Inquiry(File):
             # cfg_destination = ConfigData(Path(cfg_destination_location_path))
 
             # validate that source config was loaded
-            if not cfg_source.loaded:
+            if cfg_source.loaded:
+                self.logger.info('Datasource config file for source "{}" (row #{}) was successfully loaded from: {}' \
+                    .format(inquiry_line_details['dld_src'], cur_row + 1, cfg_source_path))
+            else:
                 _str = 'Datasource config file for the row #{} (source: {}) cannot be loaded ' \
                        'and the row was disqualified. ' \
                        'The expected to exist file is not accessible: {}' \
@@ -337,7 +342,11 @@ class Inquiry(File):
                 continue
 
             # validate that destination config was loaded
-            if not cfg_destination.loaded:
+            if cfg_destination.loaded:
+                self.logger.info('Destination config file for destination "{}" (row #{}) was successfully loaded '
+                                 'from: {}' \
+                                 .format(inquiry_line_details['dest_name'], cur_row + 1, cfg_destination_path))
+            else:
                 _str = 'Destination config file for the row #{} (destination: {}) cannot be loaded ' \
                        'and the row was disqualified. ' \
                        'The expected to exist file is not accessible: {}' \
@@ -352,6 +361,14 @@ class Inquiry(File):
                 if cfg_source_location.loaded:
                     # if the source location config was loaded, update cfg_source config with the source location config
                     cfg_source.update(cfg_source_location.get_whole_dictionary())
+                    self.logger.info('Datasource location config file for source "{}" (row #{}) was successfully '
+                                     'appended to the main datasource config file from: {}' \
+                                     .format(inquiry_line_details['dld_src'], cur_row + 1, cfg_source_location_path))
+                else:
+                    self.logger.warning('Datasource location config file for source "{}" (row #{}) was not loaded '
+                                     'to the main datasource config file. The expected source of the file is: {}' \
+                                     .format(inquiry_line_details['dld_src'], cur_row + 1,
+                                             cfg_source_location_path))
 
             if cfg_destination.loaded:
                 # load destination location config with location specific settings for the current source
@@ -359,15 +376,27 @@ class Inquiry(File):
                 if cfg_destination_location.loaded:
                     # if the source location config was loaded, update cfg_source config with the source location config
                     cfg_destination.update(cfg_destination_location.get_whole_dictionary())
+                    self.logger.info('Destination location config file for source "{}" (row #{}) was successfully '
+                                     'appended to the main destination config file from: {}' \
+                                     .format(inquiry_line_details['dld_src'], cur_row + 1,
+                                             cfg_destination_location_path))
+                else:
+                    self.logger.warning('Destination location config file for source "{}" (row #{}) was not loaded '
+                                     'to the main destination config file. The expected source of the file is: {}' \
+                                     .format(inquiry_line_details['dld_src'], cur_row + 1,
+                                             cfg_destination_location_path))
 
             if cfg_source.loaded and cfg_destination.loaded:
+                # if both config files were loaded proceed here
                 if inquiry_line_details['dld_src'] and inquiry_line_details['dld_src'].lower() == 'googledrive':
-
+                    # process googledrive requests
                     self.process_google_drive_inquiry(inquiry_line_details, cfg_source, cfg_destination,
                                                       cur_row, inq_line)
                 # this checks if the current source is listed in the "local_network_sources" section of the dictionary
-                elif inquiry_line_details['dld_src'] \
-                        and self.conf_dict.get_dict_value (inquiry_line_details['dld_src'].lower(), 'local_network_sources')[1]:
+                elif inquiry_line_details['dld_src'] and \
+                        self.conf_dict.get_dict_value (
+                            inquiry_line_details['dld_src'].lower(), 'local_network_sources')[1]:
+                    # process local network sources requests
                     self.process_local_network_inquiry(inquiry_line_details, cfg_source, cfg_destination,
                                                       cur_row, inq_line)
                 else:
@@ -394,6 +423,8 @@ class Inquiry(File):
     def process_local_network_inquiry(self, inquiry_line_details, cfg_source, cfg_destination, cur_row, inq_line):
         download_completed = False
 
+        self.logger.info('Start processing "Local Network" request for row #{}'.format(cur_row + 1))
+
         if cfg_destination:  # make sure destination config is loaded
             # prepare the source path of the downloaded data
             source_replace_path = cfg_source.get_value('Location/path_to_replace')
@@ -401,6 +432,7 @@ class Inquiry(File):
             # apply local mount point settings to the destination path
             source_path = \
                 str(Path(inquiry_line_details['dld_src_url'].replace(source_replace_path, source_mountpoint_path)))
+            self.logger.info('Final source path for the current inquiry line: {} '.format(source_path))
 
             # prepare the destination path for the downloaded file
             dest_replace_path = cfg_destination.get_value('Location/path_to_replace')
@@ -408,6 +440,7 @@ class Inquiry(File):
             # apply local mount point settings to the destination path
             destination_path = \
                 str(Path(inquiry_line_details['dest_path'].replace(dest_replace_path, dest_mountpoint_path)))
+            self.logger.info('Final destination path for the current inquiry line: {} '.format(destination_path))
 
             # get config value for dest_unique_dir flag
             dest_unique_dir = cfg_destination.get_value(
@@ -419,6 +452,7 @@ class Inquiry(File):
             if os.path.exists(source_path):
                 if os.path.isdir(source_path):
                     # copy source directory to the destination
+                    self.logger.info('Proceeding to copying - the source was identified as a directory')
                     copy_out = cm.copy_dir(source_path, destination_path)
                     if not copy_out:
                         # no errors were reported during copying
@@ -435,6 +469,7 @@ class Inquiry(File):
                                                   source_path, destination_path))
                 else:
                     # copy source file to the destination
+                    self.logger.info('Proceeding to copying - the source was identified as a file')
                     download_completed = \
                         self.copy_donwloaded_file_to_destination(source_path, destination_path,
                                                                  cur_row, inq_line, False)
@@ -454,6 +489,8 @@ class Inquiry(File):
                     # 'disqualified': True if (cur_row + 1) in self.disqualified_items else False
                 }
                 self.inq_processed_items[cur_row + 1] = processed_row_details
+                self.logger.info('Processing of the "Local Network" request for row #{} was completed successfully.'
+                                 .format(cur_row + 1))
             else:
                 _str = 'Expected to exist source data at the following path was not present: {}'.format(source_path)
                 self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
@@ -470,6 +507,8 @@ class Inquiry(File):
         downloaded_file_copied = None
         temp_file_deleted = None
 
+        self.logger.info('Start processing "Google Drive" request for row #{}'.format(cur_row + 1))
+
         # get temp directory where to save the received file
         dest_temp_dir = str(Path(cfg_source.get_value('Location/temp_dir')) / uuid.uuid4().hex)
         dest_temp_dir_unarchive = str(Path(dest_temp_dir) / uuid.uuid4().hex)
@@ -478,7 +517,7 @@ class Inquiry(File):
         # get flag defining if the temp files can be deleted after use
         delete_temp_file = ft.interpret_cfg_bool_value(cfg_source.get_value('temp_file/delete_after_use'))
 
-        self.logger.info('Starting downloading. URL: {} | Destination: {}'
+        self.logger.info('Starting download. URL: {} | Destination: {}'
                          .format(inquiry_line_details['dld_src_url'], dest_temp_dir))
 
         # proceed with the actual downloading of the file from google drive
@@ -486,7 +525,7 @@ class Inquiry(File):
             inquiry_line_details['dld_src_url'], dest_temp_dir, file_id_index, self.logger)
 
         if download_error is None:
-            self.logger.info('Downloading attempt was finished without errors. Downloaded file name: {}'
+            self.logger.info('Download attempt was finished without errors. Downloaded file name: {}'
                              .format(downloaded_file))
             if downloaded_file:
                 if cfg_destination:  # make sure destination config is loaded
@@ -567,7 +606,8 @@ class Inquiry(File):
                                              .format(dest_temp_dir))
                         except Exception as ex:
                             # report unexpected error during deleting the temp file
-                            _str = 'Unexpected Error occurred (row #{}) during an attempt to delete the temp file {}: {}\n{} ' \
+                            _str = 'Unexpected Error occurred (row #{}) during an attempt to delete ' \
+                                   'the temp file {}: {}\n{} ' \
                                 .format(cur_row + 1, downloaded_file, ex, traceback.format_exc())
                             self.logger.error(_str)
 
@@ -582,24 +622,25 @@ class Inquiry(File):
                     'dld_src': inquiry_line_details['dld_src'],
                     'dld_src_url': inquiry_line_details['dld_src_url'],
                     'dest_name': inquiry_line_details['dest_name'],
-                    # 'dest_path': inquiry_line_details['dest_path'],
                     'unarchive': inquiry_line_details['unarchive'],
                     'downloaded_file': downloaded_file,
                     'destination_path': '{} --> actual path: {}'.format(inquiry_line_details['dest_path'],destination_path),
                     'downloaded_file_unarchived': downloaded_file_unarchived,
                     'downloaded_file_copied': downloaded_file_copied,
                     'temp_file_deleted': temp_file_deleted,
-                    # 'disqualified': True if (cur_row + 1) in self.disqualified_items else False
                 }
                 self.inq_processed_items[cur_row + 1] = processed_row_details
+                self.logger.info('Processing of the Google Drive request for row #{} was completed successfully.'
+                                 .format(cur_row + 1))
             else:
                 _str = 'Unexpectedly the path for the downloaded file was not received from the "gdown" ' \
-                       'module, while no other errors were reported.'
+                       'module, while no other errors were reported. The inquiry item for row #{} was disqualified.'\
+                    .format(cur_row + 1)
                 self.disqualify_inquiry_item(cur_row + 1, _str, inq_line)
                 self.logger.error(_str)
 
         else:
-            self.logger.warning('Downloading attempt was finished with errors')
+            self.logger.warning('Download attempt was finished with errors')
             self.logger.error(download_error)
             # self.error.add_error(download_error)
             self.disqualify_inquiry_item(cur_row + 1, download_error, inq_line)

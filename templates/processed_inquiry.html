@@ -80,13 +80,13 @@
                         </td>
                         <td>
                             {% if inquiry.inq_processed_items[item]['downloaded_file_unarchived'] == true %}
-                                {{indent_left_0}}<b>Un-archived</b>:
+                                {{indent_left_0}}<b>Un-archived & Copied</b>:
                                 <span style="font-weight: bold; color: green ">Yes</span>
                             {% elif inquiry.inq_processed_items[item]['downloaded_file_unarchived'] == false %}
-                                {{indent_left_0}}Un-archived:
+                                {{indent_left_0}}Un-archived & Copied:
                                 <span style="font-weight: normal; color: black ">No</span>
                             {% else %}
-                                {{indent_left_0}}Un-archived:
+                                {{indent_left_0}}Un-archived & Copied:
                                 <span style="font-weight: normal; color: black ">{{inquiry.inq_processed_items[item]['downloaded_file_unarchived']}}</span>
                             {% endif %}
                             <br/>

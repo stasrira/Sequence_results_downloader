@@ -160,6 +160,8 @@ def copy_file(file_path, new_file_path):
 
 def copy_dir(src_path, dest_path):
     if file_exists(src_path):
+        # pre-create the directory if it does not exist
+        verify_and_create_dir(dest_path)
         try:
             dru.copy_tree(src_path, dest_path)
             return None
