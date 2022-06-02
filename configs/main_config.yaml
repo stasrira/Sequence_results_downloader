@@ -10,8 +10,8 @@ Logging:
 
 Email:
     #default settings for sending emails
-    default_from_email: stasrirak.ms@gmail.com
-    send_to_emails: ['stasrirak.ms@gmail.com']  # , 'stasrira@yahoo.com'
+    default_from_email: stas.rirak@mssm.edu
+    send_to_emails: ['stasrirak.ms@gmail.com','stas.rirak@mssm.edu','alexandria.vornholt@mssm.edu']
     send_emails: True # expected values: True, False
 
 Validate:
