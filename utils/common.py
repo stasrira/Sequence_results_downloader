@@ -193,8 +193,22 @@ def verify_and_create_dir(dir, mode = None):
         mode = 0o766  # full for the user and read and write for groups and others
     if not os.path.exists(dir):
         # create dir if it does not exist
-        os.mkdir(dir)
-        os.chmod(dir, mode)
+        # os.mkdir(dir)
+        os.makedirs(dir, mode=mode)
+        # os.chmod(dir, mode)
+
+def change_dir_mode_recursively(dir, mode = None):
+    if mode is None:
+        mode = 0o766  # full for the user and read and write for groups and others
+    if os.path.exists(dir):
+        os.chmod(dir, mode)  # change mode of the top directory
+        for root, dirs, files in os.walk(dir):
+            for item in dirs:
+                # change mode of all sub-directories
+                os.chmod(os.path.join(root, item), mode)
+            for item in files:
+                # change mode for all files
+                os.chmod(os.path.join(root, item), mode)
 
 def get_google_file_id(url, file_id_index = None):
     # splits url by "/" sign and retrieves the file_id as a particular element from the list

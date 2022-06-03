@@ -489,6 +489,9 @@ class Inquiry(File):
                     # 'disqualified': True if (cur_row + 1) in self.disqualified_items else False
                 }
                 self.inq_processed_items[cur_row + 1] = processed_row_details
+                # apply change mode to all downloaded/copied data
+                cm.change_dir_mode_recursively(destination_path)
+
                 self.logger.info('Processing of the "Local Network" request for row #{} was completed successfully.'
                                  .format(cur_row + 1))
             else:
@@ -630,6 +633,8 @@ class Inquiry(File):
                     'temp_file_deleted': temp_file_deleted,
                 }
                 self.inq_processed_items[cur_row + 1] = processed_row_details
+                # apply change mode to all downloaded/copied data
+                cm.change_dir_mode_recursively(destination_path)
                 self.logger.info('Processing of the Google Drive request for row #{} was completed successfully.'
                                  .format(cur_row + 1))
             else:

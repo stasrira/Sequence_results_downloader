@@ -9,6 +9,7 @@ download_source:
     googledrive: GoogleDrive
     nextseq: NextSeq
     miseq: MiSeq
+    minerva: Minerva
 
 local_network_sources:
     nextseq: True
@@ -17,4 +18,5 @@ local_network_sources:
 
 destination_name:
     box: box
+    box2: box2
     minerva: Minerva
