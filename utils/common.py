@@ -190,7 +190,7 @@ def get_unique_dir_name_with_datestamp(destination, downloaded_path = None):
 
 def verify_and_create_dir(dir, mode = None):
     if mode is None:
-        mode = 0o766  # full for the user and read and write for groups and others
+        mode = 0o776  # full for the user and read and write for groups and others
     if not os.path.exists(dir):
         # create dir if it does not exist
         # os.mkdir(dir)
@@ -199,7 +199,7 @@ def verify_and_create_dir(dir, mode = None):
 
 def change_dir_mode_recursively(dir, mode = None):
     if mode is None:
-        mode = 0o766  # full for the user and read and write for groups and others
+        mode = 0o776  # full for the user and groups and read and write for others
     if os.path.exists(dir):
         os.chmod(dir, mode)  # change mode of the top directory
         for root, dirs, files in os.walk(dir):
